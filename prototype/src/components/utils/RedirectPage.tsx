@@ -38,6 +38,17 @@ function RedirectPage() {
                     return;
                 }
 
+                try {
+                    const protocol = new URL(dest).protocol;
+                    if (protocol !== 'http:' && protocol !== 'https:') {
+                        setError('This link points to an unsafe destination and has been blocked.');
+                        return;
+                    }
+                } catch {
+                    setError('This link contains an invalid URL.');
+                    return;
+                }
+
                 // Analytics tracking — fire-and-forget, don't block redirect
                 fetch(`${ANALYTICS_URL}/track`, {
                     method: 'POST',
