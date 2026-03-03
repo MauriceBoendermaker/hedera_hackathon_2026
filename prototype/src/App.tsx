@@ -14,24 +14,32 @@ import "./assets/scss/style.scss";
 function App() {
   useEffect(() => {
     const cursor = document.getElementById('custom-cursor');
+    if (!cursor) return;
+
+    let cx = 0, cy = 0;
+    let rafId = 0;
 
     const move = (e: MouseEvent) => {
-      if (cursor) {
-        cursor.style.top = `${e.clientY}px`;
-        cursor.style.left = `${e.clientX}px`;
+      cx = e.clientX;
+      cy = e.clientY;
+      if (!rafId) {
+        rafId = requestAnimationFrame(() => {
+          cursor.style.transform = `translate3d(${cx}px, ${cy}px, 0) translate(-50%, -50%)`;
+          rafId = 0;
+        });
       }
     };
 
     const addHoverClass = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest('a')) {
-        cursor?.classList.add('cursor-link');
-        cursor?.classList.remove('cursor-hovering');
+        cursor.classList.add('cursor-link');
+        cursor.classList.remove('cursor-hovering');
       } else if (target.closest('button') || target.closest('input')) {
-        cursor?.classList.add('cursor-hovering');
-        cursor?.classList.remove('cursor-link');
+        cursor.classList.add('cursor-hovering');
+        cursor.classList.remove('cursor-link');
       } else {
-        cursor?.classList.remove('cursor-hovering', 'cursor-link');
+        cursor.classList.remove('cursor-hovering', 'cursor-link');
       }
     };
 
@@ -41,6 +49,7 @@ function App() {
     return () => {
       window.removeEventListener('mousemove', move);
       window.removeEventListener('mouseover', addHoverClass);
+      cancelAnimationFrame(rafId);
     };
   }, []);
 

@@ -37,7 +37,7 @@ function ShortenPage() {
 
         function handleDocumentMouseMove(e: MouseEvent) {
             const card = cardRef.current;
-            if (!card) return;
+            if (!card || !card.offsetParent) return; // skip when modal is hidden
 
             const { innerWidth, innerHeight } = window;
             const x = e.clientX / innerWidth - 0.5;

@@ -9,6 +9,7 @@
     pointer-events: none;
     z-index: 99999;
     transform: translate(-50%, -50%);
+    will-change: transform;
     transition: width 0.2s ease, height 0.2s ease, box-shadow 0.2s ease;
     box-shadow: 0 0 12px 4px rgba(255, 160, 240, 0.3);
     mix-blend-mode: lighten;
