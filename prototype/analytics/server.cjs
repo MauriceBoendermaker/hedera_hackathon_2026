@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
@@ -89,6 +90,13 @@ if (OPERATOR_ID && OPERATOR_KEY) {
 } else {
   log.warn('OPERATOR_ID/OPERATOR_KEY not set — /hcs/submit will be disabled');
 }
+
+// ── Request ID ───────────────────────────────────────────────────────
+app.use((req, res, next) => {
+    req.id = crypto.randomUUID();
+    res.setHeader('X-Request-ID', req.id);
+    next();
+});
 
 app.use(bodyParser.json({ limit: '10kb' }));
 
@@ -245,7 +253,7 @@ app.post('/track', (req, res) => {
         insertVisit.run(shortId, ts, cleanReferrer, cleanUA, ip);
         res.sendStatus(200);
     } catch (err) {
-        log.error({ err, shortId }, 'Failed to insert visit');
+        log.error({ err, shortId, reqId: req.id }, 'Failed to insert visit');
         res.sendStatus(500);
     }
 });
@@ -287,7 +295,7 @@ app.get('/stats', (req, res) => {
         }
         res.json(counts);
     } catch (err) {
-        log.error({ err }, 'Failed to query stats');
+        log.error({ err, reqId: req.id }, 'Failed to query stats');
         res.status(500).json({ error: 'Failed to read stats' });
     }
 });
@@ -347,11 +355,11 @@ app.post('/hcs/submit', async (req, res) => {
 
     const sequenceNumber = receipt.topicSequenceNumber.toString();
 
-    log.info({ sequenceNumber, slug }, 'HCS message submitted');
+    log.info({ sequenceNumber, slug, reqId: req.id }, 'HCS message submitted');
 
     return res.json({ sequenceNumber, topicId: HCS_TOPIC_ID });
   } catch (err) {
-    log.error({ err: err.message }, 'HCS submit failed');
+    log.error({ err: err.message, reqId: req.id }, 'HCS submit failed');
     if (err.message === 'HCS_TIMEOUT') {
       return res.status(504).json({ error: 'HCS submission timed out' });
     }
