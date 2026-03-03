@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
-import abi from '../abi_xDAI.json';
+import abi from '../abi_hedera.json';
 import { ShowToast } from './utils/ShowToast';
 import QRModal from './utils/QRModal';
 

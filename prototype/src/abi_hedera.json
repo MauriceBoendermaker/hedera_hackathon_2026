@@ -34,6 +34,24 @@
         "inputs": [
             {
                 "internalType": "string",
+                "name": "customId",
+                "type": "string"
+            },
+            {
+                "internalType": "string",
+                "name": "originalUrl",
+                "type": "string"
+            }
+        ],
+        "name": "createCustomShortUrl",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "string",
                 "name": "originalUrl",
                 "type": "string"
             }
@@ -100,6 +118,25 @@
                 "internalType": "string[]",
                 "name": "",
                 "type": "string[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "string",
+                "name": "shortId",
+                "type": "string"
+            }
+        ],
+        "name": "shortIdExists",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
             }
         ],
         "stateMutability": "view",

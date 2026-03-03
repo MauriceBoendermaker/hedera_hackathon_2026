@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { ethers } from 'ethers';
-import abi from '../../abi_xDAI.json';
+import abi from '../../abi_hedera.json';
 
 const CONTRACT_ADDRESS = process.env.REACT_APP_CONTRACT_ADDRESS as string;
 const INFURA_URL = process.env.REACT_APP_INFURA_URL as string;
