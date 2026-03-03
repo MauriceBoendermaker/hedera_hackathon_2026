@@ -74,3 +74,31 @@
 .price-disclaimer {
     color: rgba(211, 211, 211, 0.75);
 }
+
+.slug-feedback {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    min-height: 20px;
+}
+
+.slug-hint {
+    color: rgba(255, 180, 100, 0.85);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+
+    &.visible {
+        opacity: 1;
+    }
+}
+
+.slug-counter {
+    color: rgba(255, 255, 255, 0.4);
+    margin-left: auto;
+    transition: color 0.2s ease;
+
+    &--over {
+        color: $bad-red;
+    }
+}

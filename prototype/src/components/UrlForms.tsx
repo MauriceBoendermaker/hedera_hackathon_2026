@@ -15,8 +15,10 @@ export function UrlForms() {
     const [shortUrl, setShortUrl] = useState('');
     const [shortUrlExistsError, setShortUrlExistsError] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [slugHint, setSlugHint] = useState('');
 
     const hasWallet = typeof window !== 'undefined' && !!window.ethereum;
+    const MAX_SLUG_LENGTH = 32;
 
     function isValidUrl(string: string) {
         try {
@@ -204,38 +206,62 @@ export function UrlForms() {
                         className={`form-control ${urlInvalid ? 'is-invalid' : ''}`}
                     />
 
-                    {isCustomMode && (
-                        <div className="input-group mt-3">
-                            <span className="input-group-text">durl.dev/</span>
-                            <input
-                                type="text"
-                                value={shortUrl}
-                                onChange={(e) => {
-                                    let value = e.target.value.trim();
+                    {isCustomMode && (() => {
+                        const slugLength = shortUrl.replace(/^\//, '').length;
+                        const isOverLimit = slugLength > MAX_SLUG_LENGTH;
+                        return (
+                            <>
+                                <div className="input-group mt-3">
+                                    <span className="input-group-text">durl.dev/</span>
+                                    <input
+                                        type="text"
+                                        value={shortUrl}
+                                        onChange={(e) => {
+                                            const raw = e.target.value;
 
-                                    value = value.replace(/\s+/g, '-');
+                                            let value = raw.trim();
+                                            value = value.replace(/\s+/g, '-');
 
-                                    value = value.replace(/[^a-zA-Z0-9_-]/g, '');
+                                            const hadInvalid = /[^a-zA-Z0-9_\-/]/.test(value);
+                                            value = value.replace(/[^a-zA-Z0-9_-]/g, '');
 
-                                    if (!value.startsWith('/')) {
-                                        value = '/' + value;
-                                    }
+                                            if (!value.startsWith('/')) {
+                                                value = '/' + value;
+                                            }
 
-                                    setShortUrl(value);
-                                    setUrlInvalid(false);
-                                    setShortUrlExistsError(false);
-                                }}
-                                placeholder="custom-link"
-                                className={`form-control ${shortUrlExistsError || !/^\/.*/.test(shortUrl) ? 'is-invalid' : ''}`}
-                            />
-                        </div>
-                    )}
+                                            if (hadInvalid) {
+                                                setSlugHint('Only letters, numbers, hyphens, and underscores allowed');
+                                            } else if (value.replace(/^\//, '').length > MAX_SLUG_LENGTH) {
+                                                setSlugHint(`Maximum ${MAX_SLUG_LENGTH} characters`);
+                                            } else {
+                                                setSlugHint('');
+                                            }
 
-                    {shortUrlExistsError && (
-                        <div className="invalid-feedback d-block mt-1">
-                            That short URL is already taken.
-                        </div>
-                    )}
+                                            setShortUrl(value);
+                                            setUrlInvalid(false);
+                                            setShortUrlExistsError(false);
+                                        }}
+                                        maxLength={MAX_SLUG_LENGTH + 1}
+                                        placeholder="custom-link"
+                                        className={`form-control ${shortUrlExistsError || isOverLimit ? 'is-invalid' : ''}`}
+                                    />
+                                </div>
+                                <div className="slug-feedback mt-1">
+                                    <span className={`slug-hint ${slugHint ? 'visible' : ''}`}>
+                                        {slugHint || '\u00A0'}
+                                    </span>
+                                    <span className={`slug-counter ${isOverLimit ? 'slug-counter--over' : ''}`}>
+                                        {slugLength}/{MAX_SLUG_LENGTH}
+                                    </span>
+                                </div>
+                                {shortUrlExistsError && (
+                                    <div className="invalid-feedback d-block mt-1">
+                                        That short URL is already taken.
+                                    </div>
+                                )}
+                            </>
+                        );
+                    })()}
                 </div>
 
                 <div className="button-group mt-3">
