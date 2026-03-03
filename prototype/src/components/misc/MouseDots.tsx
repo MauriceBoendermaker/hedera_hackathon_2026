@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const DOT_COUNT = 40;
 const RESOLUTION_SCALE = 0.5; // render at half res, scale up via CSS
@@ -14,11 +14,21 @@ const DOT_DIST = Math.sqrt(DOT_DIST_SQ);
 const STRIDE = 4;
 const dots = new Float64Array(DOT_COUNT * STRIDE);
 
+const MOBILE_BREAKPOINT = 768;
+
 function MouseDots() {
+    const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const mouse = useRef({ x: 0, y: 0 });
 
     useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
+    useEffect(() => {
+        if (isMobile) return;
         const canvas = canvasRef.current;
         if (!canvas) return;
 
@@ -179,7 +189,9 @@ function MouseDots() {
             window.removeEventListener('resize', handleResize);
             document.removeEventListener('visibilitychange', handleVisibility);
         };
-    }, []);
+    }, [isMobile]);
+
+    if (isMobile) return null;
 
     return (
         <canvas
