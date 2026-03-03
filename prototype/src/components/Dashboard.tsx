@@ -3,6 +3,7 @@ import { ethers } from 'ethers';
 import abi from '../abi_hedera.json';
 import { ShowToast } from './utils/ShowToast';
 import QRModal from './utils/QRModal';
+import { getHashScanTxUrl } from 'utils/HederaConfig';
 
 const CONTRACT_ADDRESS = process.env.REACT_APP_CONTRACT_ADDRESS as string;
 const PROJECT_URL = process.env.REACT_APP_PROJECT_URL as string;
@@ -126,6 +127,7 @@ function Dashboard() {
                                             <th>Original URL</th>
                                             <th className="text-center">Actions</th>
                                             <th className="text-center">Visits</th>
+                                            <th className="text-center">HashScan</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -183,6 +185,37 @@ function Dashboard() {
                                                     </td>
                                                     <td className="text-center">
                                                         {visitCounts[link.shortId] || 0}
+                                                    </td>
+                                                    <td className="text-center">
+                                                        {(() => {
+                                                            const txHash = localStorage.getItem(`txHash_${link.shortId}`);
+                                                            if (txHash) {
+                                                                return (
+                                                                    <div className="d-flex justify-content-center gap-2">
+                                                                        <a
+                                                                            href={getHashScanTxUrl(txHash)}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className="btn btn-sm btn-outline-light"
+                                                                            title="View on HashScan"
+                                                                        >
+                                                                            <i className="fas fa-external-link-alt" />
+                                                                        </a>
+                                                                        <button
+                                                                            className="btn btn-sm btn-outline-light"
+                                                                            onClick={() => {
+                                                                                navigator.clipboard.writeText(txHash);
+                                                                                ShowToast('Tx hash copied!', 'success');
+                                                                            }}
+                                                                            title="Copy tx hash"
+                                                                        >
+                                                                            <i className="fas fa-hashtag" />
+                                                                        </button>
+                                                                    </div>
+                                                                );
+                                                            }
+                                                            return <span className="text-muted small">--</span>;
+                                                        })()}
                                                     </td>
                                                 </tr>
                                             );
