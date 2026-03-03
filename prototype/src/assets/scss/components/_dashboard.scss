@@ -11,6 +11,30 @@
     }
 }
 
+.dashboard-empty {
+    padding: 48px 20px;
+
+    > i {
+        font-size: 48px;
+        color: $primary-light;
+        opacity: 0.5;
+        margin-bottom: 20px;
+    }
+
+    h4 {
+        color: $white;
+        margin-bottom: 8px;
+    }
+
+    p {
+        color: rgba(255, 255, 255, 0.5);
+        margin-bottom: 24px;
+        max-width: 320px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+}
+
 .dashboard-toolbar {
     display: flex;
     align-items: center;

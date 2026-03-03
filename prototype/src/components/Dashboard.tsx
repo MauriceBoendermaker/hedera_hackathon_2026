@@ -215,7 +215,14 @@ function Dashboard() {
                                 </table>
                             </div>
                         ) : links.length === 0 ? (
-                            <div className="alert alert-danger">No links found for this wallet.</div>
+                            <div className="dashboard-empty text-center">
+                                <i className="fas fa-link" />
+                                <h4>No links yet</h4>
+                                <p>Create your first decentralized short link to see it here.</p>
+                                <a href="/#/" className="btn btn-primary">
+                                    Shorten a link
+                                </a>
+                            </div>
                         ) : (
                             <>
                             <div className="dashboard-toolbar">
