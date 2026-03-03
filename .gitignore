@@ -33,6 +33,5 @@ yarn-error.log*
 .idea/
 .claude/
 !.claude/settings.json
-.planning/
 
 prototype/analytics/logs.json
