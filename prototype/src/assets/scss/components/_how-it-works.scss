@@ -1,4 +1,10 @@
 .how-it-works-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 80px 0 48px;
+
     ul > li + li {
         margin-top: 1rem;
     }

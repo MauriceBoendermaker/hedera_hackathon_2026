@@ -2,8 +2,8 @@ import React from 'react';
 
 function About() {
     return (
-        <section className="about-container d-flex align-items-center justify-content-center min-vh-100">
-            <div className="container py-5">
+        <section className="about-container">
+            <div className="container">
                 <div className="row justify-content-center">
                     <div className="col-md-8 glass-card">
                         <h1 className="title-glow mb-4">About dURL</h1>

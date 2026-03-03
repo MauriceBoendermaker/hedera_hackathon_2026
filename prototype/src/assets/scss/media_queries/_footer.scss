@@ -4,11 +4,14 @@
 
 @media (max-width: 991.98px) {
     .footer-parent {
-        padding-top: 25px;
-        padding-bottom: 25px;
+        position: static;
+        bottom: unset;
+        z-index: unset;
         margin-top: 0;
         border-top-left-radius: 0;
         border-top-right-radius: 0;
+        box-shadow: none;
+        padding: 20px 16px;
 
         p {
             font-size: 14px;
@@ -23,8 +26,20 @@
 
 @media (max-width: 767.98px) {}
 
-@media (max-width: 575.98px) {}
+@media (max-width: 575.98px) {
+    .footer-parent {
+        padding: 16px 12px;
 
-@media (max-width: 479.98px) {}
+        p {
+            font-size: 11px;
+        }
+    }
+}
+
+@media (max-width: 479.98px) {
+    .footer-parent {
+        padding: 14px 10px;
+    }
+}
 
 @media (max-width: 319.98px) {}

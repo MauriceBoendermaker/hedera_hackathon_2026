@@ -142,18 +142,24 @@ export default function Nav() {
                 aria-hidden={!sidebarOpen}
             >
                 <div className="sidebar-content">
-                    <button className="close-btn" onClick={closeSidebar} aria-label="Close menu">&times;</button>
-                    <NavLink to="/" className="nav-link" onClick={closeSidebar}>Home</NavLink>
-                    <NavLink to="/how-it-works" className="nav-link" onClick={closeSidebar}>How it works</NavLink>
-                    <NavLink to="/about" className="nav-link" onClick={closeSidebar}>About</NavLink>
-                    {!isConnected ? (
-                        <button className="btn btn-outline-light mt-3" onClick={() => { connectWallet(); closeSidebar(); }}>
-                            Connect Wallet
-                        </button>
-                    ) : (
-                        <NavLink to="/dashboard" className="btn-link" onClick={closeSidebar}>
-                            Dashboard
-                        </NavLink>
+                    <div className="sidebar-header">
+                        <span className="sidebar-brand">dURL <small>{'//'}dev</small></span>
+                        <button className="close-btn" onClick={closeSidebar} aria-label="Close menu">&times;</button>
+                    </div>
+                    <nav className="sidebar-nav">
+                        <NavLink to="/" className="nav-link" onClick={closeSidebar}>Home</NavLink>
+                        <NavLink to="/how-it-works" className="nav-link" onClick={closeSidebar}>How it works</NavLink>
+                        <NavLink to="/about" className="nav-link" onClick={closeSidebar}>About</NavLink>
+                        {isConnected && (
+                            <NavLink to="/dashboard" className="nav-link" onClick={closeSidebar}>Dashboard</NavLink>
+                        )}
+                    </nav>
+                    {!isConnected && (
+                        <div className="sidebar-footer">
+                            <button className="btn btn-outline-light w-100" onClick={() => { connectWallet(); closeSidebar(); }}>
+                                Connect Wallet
+                            </button>
+                        </div>
                     )}
                 </div>
             </div>

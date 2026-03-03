@@ -2,7 +2,7 @@ import React from 'react';
 
 function HowItWorks() {
     return (
-        <section className="how-it-works-container d-flex align-items-center justify-content-center min-vh-100">
+        <section className="how-it-works-container">
             <div className="container">
                 <div className="row justify-content-center">
                     <div className="col-md-8 glass-card">

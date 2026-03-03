@@ -4,12 +4,35 @@
 @media (max-width: 1199.98px) {}
 
 // ── Tablet portrait ────────────────────────────────────────────────
+// Nav: 56px fixed
 @media (max-width: 991.98px) {
     .dashboard-container {
         align-items: flex-start;
-        padding-top: 100px;
-        padding-bottom: 40px;
+        padding-top: 72px;
+        padding-bottom: 32px;
         min-height: unset;
+    }
+
+    .about-container,
+    .how-it-works-container {
+        min-height: unset;
+        align-items: flex-start;
+        padding-top: 72px;
+        padding-bottom: 32px;
+    }
+
+    .homepage-hero {
+        padding-top: 72px;
+        padding-bottom: 32px;
+
+        > .container {
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+    }
+
+    p {
+        line-height: 1.5;
     }
 }
 
@@ -93,24 +116,36 @@
     .redirect-destination {
         font-size: 15px;
     }
+
+    .dashboard-search .form-control,
+    .dashboard-sort .form-select {
+        min-height: 44px;
+        font-size: 14px;
+    }
+
+    .pagination .page-link {
+        min-width: 44px;
+        min-height: 44px;
+    }
 }
 
 // ── Small phones ───────────────────────────────────────────────────
+// Nav: 52px fixed
 @media (max-width: 575.98px) {
     .glass-card {
         padding: 16px;
     }
 
     .title {
-        font-size: 24px;
+        font-size: 22px;
     }
 
     .subtitle-glow {
-        font-size: 15px;
+        font-size: 14px;
     }
 
     .title-glow {
-        font-size: 20px;
+        font-size: 18px;
     }
 
     .metamask-banner {
@@ -154,6 +189,30 @@
         }
     }
 
+    .dashboard-container {
+        padding-top: 68px;
+        padding-bottom: 20px;
+    }
+
+    .about-container,
+    .how-it-works-container {
+        padding-top: 68px;
+        padding-bottom: 20px;
+    }
+
+    .homepage-hero {
+        padding-top: 68px;
+        padding-bottom: 20px;
+    }
+
+    .nav-tabs {
+        width: 100%;
+
+        .nav-item {
+            flex: 1;
+        }
+    }
+
     .redirect-countdown-ring {
         width: 80px;
         height: 80px;
@@ -162,35 +221,74 @@
     .redirect-countdown-number {
         font-size: 28px;
     }
+
+    .homepage-hero .subtitle-glow {
+        margin-bottom: 16px !important;
+    }
+
+    .homepage-hero .mt-4 {
+        margin-top: 1rem !important;
+    }
 }
 
 // ── Extra small phones ─────────────────────────────────────────────
+// Nav: 48px fixed
 @media (max-width: 479.98px) {
     .title {
         font-size: 20px;
+    }
+
+    .title-glow {
+        font-size: 17px;
     }
 
     .glass-card {
         padding: 12px;
     }
 
-    .nav-tabs {
+    .nav-tabs .nav-item button {
         width: 100%;
-
-        .nav-item {
-            flex: 1;
-
-            button {
-                width: 100%;
-                padding: 8px 10px;
-                font-size: 12px;
-            }
-        }
+        padding: 8px 10px;
+        font-size: 12px;
     }
 
     .input-group-text {
         font-size: 11px;
         padding: 8px;
+    }
+
+    .dashboard-container {
+        padding-top: 62px;
+        padding-bottom: 16px;
+    }
+
+    .about-container,
+    .how-it-works-container {
+        padding-top: 62px;
+        padding-bottom: 16px;
+    }
+
+    .homepage-hero {
+        padding-top: 62px;
+        padding-bottom: 16px;
+    }
+
+    .redirect-card {
+        padding: 24px 16px;
+    }
+
+    .redirect-countdown-ring {
+        width: 70px;
+        height: 70px;
+    }
+
+    .redirect-countdown-number {
+        font-size: 24px;
+    }
+
+    .metamask-banner .d-flex {
+        flex-direction: column;
+        text-align: center;
     }
 }
 
