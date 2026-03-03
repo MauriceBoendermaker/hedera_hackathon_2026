@@ -219,7 +219,7 @@ function Dashboard() {
                         )}
 
                         {loading ? (
-                            <div className="table-responsive">
+                            <div className="table-responsive" role="status" aria-busy="true" aria-label="Loading your links">
                                 <table className="table table-dark align-middle">
                                     <thead>
                                         <tr>
