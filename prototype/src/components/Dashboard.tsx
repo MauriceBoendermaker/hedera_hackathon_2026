@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ethers } from 'ethers';
 import abi from '../abi_hedera.json';
 import { ShowToast } from './utils/ShowToast';
@@ -16,97 +16,95 @@ function Dashboard() {
     const [visitCounts, setVisitCounts] = useState<Record<string, number>>({});
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState<SortOption>('newest');
+    const [retryCount, setRetryCount] = useState(0);
 
-    useEffect(() => {
-        let cancelled = false;
-        const abortController = new AbortController();
+    const loadLinks = useCallback(async (signal: AbortSignal) => {
+        if (!window.ethereum) return;
 
-        async function loadLinks() {
-            if (!window.ethereum) return;
-
-            try {
-                const res = await fetch(`${ANALYTICS_URL}/stats`, { signal: abortController.signal });
-                if (res.status === 429) {
-                    if (!cancelled) ShowToast('Rate limit reached — stats requests are temporarily throttled.', 'danger');
-                    return;
-                }
-                if (!res.ok) throw new Error(`Stats request failed (${res.status})`);
-                const stats = await res.json();
-                if (!cancelled) setVisitCounts(stats);
-            } catch (e) {
-                if (!cancelled && !(e instanceof DOMException)) {
-                    ShowToast('Could not load visit stats. Analytics server may be down.', 'danger');
-                }
+        try {
+            const res = await fetch(`${ANALYTICS_URL}/stats`, { signal });
+            if (res.status === 429) {
+                ShowToast('Rate limit reached — stats requests are temporarily throttled.', 'danger');
+                return;
             }
-
-            try {
-                if (typeof window === 'undefined' || !window.ethereum) {
-                    if (!cancelled) {
-                        setError('MetaMask not detected. Please install MetaMask to use this feature.');
-                        setLoading(false);
-                    }
-                    return;
-                }
-
-                if (!cancelled) setLoading(true);
-
-                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                if (cancelled) return;
-                if (!accounts || accounts.length === 0) {
-                    setError('Wallet connection rejected or failed.');
-                    return;
-                }
-
-                const provider = new ethers.BrowserProvider(window.ethereum);
-                const signer = await provider.getSigner();
-                const address = await signer.getAddress();
-                if (cancelled) return;
-                setAccount(address);
-
-                const contract = new ethers.Contract(CONTRACT_ADDRESS, abi, provider);
-                const shortIds: string[] = await contract.getUserLinks(address);
-                if (cancelled) return;
-
-                const formatted = await Promise.all(
-                    shortIds.map(async (shortId) => {
-                        const url = await contract.getOriginalUrl(shortId);
-                        return { shortId, url };
-                    })
-                );
-
-                if (!cancelled) {
-                    setLinks(formatted);
-                    setError('');
-                }
-            } catch (err: any) {
-                if (!cancelled) {
-                    const message = err?.reason || err?.message || 'Unknown error';
-                    setError(`Failed to load links: ${message}`);
-                }
-            } finally {
-                if (!cancelled) setLoading(false);
+            if (!res.ok) throw new Error(`Stats request failed (${res.status})`);
+            const stats = await res.json();
+            setVisitCounts(stats);
+        } catch (e) {
+            if (!(e instanceof DOMException)) {
+                ShowToast('Could not load visit stats. Analytics server may be down.', 'danger');
             }
         }
 
-        loadLinks();
+        try {
+            if (typeof window === 'undefined' || !window.ethereum) {
+                setError('MetaMask not detected. Please install MetaMask to use this feature.');
+                setLoading(false);
+                return;
+            }
+
+            setLoading(true);
+
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            if (signal.aborted) return;
+            if (!accounts || accounts.length === 0) {
+                setError('Wallet connection rejected or failed.');
+                return;
+            }
+
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+            const address = await signer.getAddress();
+            if (signal.aborted) return;
+            setAccount(address);
+
+            const contract = new ethers.Contract(CONTRACT_ADDRESS, abi, provider);
+            const shortIds: string[] = await contract.getUserLinks(address);
+            if (signal.aborted) return;
+
+            const formatted = await Promise.all(
+                shortIds.map(async (shortId) => {
+                    const url = await contract.getOriginalUrl(shortId);
+                    return { shortId, url };
+                })
+            );
+
+            if (!signal.aborted) {
+                setLinks(formatted);
+                setError('');
+            }
+        } catch (err: any) {
+            if (!signal.aborted) {
+                const message = err?.reason || err?.message || 'Unknown error';
+                setError(`Failed to load links: ${message}`);
+            }
+        } finally {
+            if (!signal.aborted) setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        const abortController = new AbortController();
+
+        loadLinks(abortController.signal);
 
         let pollFailures = 0;
         const statsInterval = setInterval(async () => {
-            if (cancelled) return;
+            if (abortController.signal.aborted) return;
             try {
                 const res = await fetch(`${ANALYTICS_URL}/stats`, { signal: abortController.signal });
                 if (res.status === 429) {
-                    if (!cancelled) ShowToast('Rate limit reached — stats requests are temporarily throttled.', 'danger');
+                    ShowToast('Rate limit reached — stats requests are temporarily throttled.', 'danger');
                     return;
                 }
                 if (!res.ok) throw new Error(`Stats request failed (${res.status})`);
                 const stats = await res.json();
-                if (!cancelled) {
+                if (!abortController.signal.aborted) {
                     setVisitCounts(stats);
                     pollFailures = 0;
                 }
             } catch (e) {
-                if (!cancelled && !(e instanceof DOMException)) {
+                if (!abortController.signal.aborted && !(e instanceof DOMException)) {
                     pollFailures++;
                     if (pollFailures >= 3) {
                         ShowToast('Visit stats are temporarily unavailable.', 'danger');
@@ -117,11 +115,10 @@ function Dashboard() {
         }, 5000);
 
         return () => {
-            cancelled = true;
             abortController.abort();
             clearInterval(statsInterval);
         };
-    }, []);
+    }, [loadLinks, retryCount]);
 
     async function copyToClipboard(shortId: string) {
         const fullUrl = `${PROJECT_URL}/#/${shortId}`;
@@ -185,7 +182,17 @@ function Dashboard() {
                             <span className="text-light small">Wallet: {account}</span>
                         </div>
 
-                        {error && <div className="alert alert-danger">{error}</div>}
+                        {error && (
+                            <div className="alert alert-danger d-flex justify-content-between align-items-center">
+                                <span>{error}</span>
+                                <button
+                                    className="btn btn-sm btn-outline-danger ms-3 flex-shrink-0"
+                                    onClick={() => setRetryCount(c => c + 1)}
+                                >
+                                    <i className="fas fa-redo me-1" /> Retry
+                                </button>
+                            </div>
+                        )}
 
                         {loading ? (
                             <div className="table-responsive">
