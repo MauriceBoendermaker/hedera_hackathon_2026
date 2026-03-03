@@ -4,7 +4,7 @@ const path = require('path');
 const bodyParser = require('body-parser');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 5001;
 const LOG_FILE = path.join(__dirname, 'logs.json');
 
 app.use(bodyParser.json());
