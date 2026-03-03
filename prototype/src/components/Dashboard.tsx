@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ethers } from 'ethers';
 import abi from '../abi_hedera.json';
 import { ShowToast } from './utils/ShowToast';
 import QRModal from './utils/QRModal';
 import { getHashScanTxUrl, CONTRACT_ADDRESS, PROJECT_URL, ANALYTICS_URL } from 'utils/HederaConfig';
+
+type SortOption = 'newest' | 'oldest' | 'most-visited' | 'least-visited';
 
 function Dashboard() {
     const [account, setAccount] = useState('');
@@ -12,6 +14,8 @@ function Dashboard() {
     const [loading, setLoading] = useState(true);
     const [qrTarget, setQrTarget] = useState<string | null>(null);
     const [visitCounts, setVisitCounts] = useState<Record<string, number>>({});
+    const [searchQuery, setSearchQuery] = useState('');
+    const [sortBy, setSortBy] = useState<SortOption>('newest');
 
     useEffect(() => {
         let cancelled = false;
@@ -132,6 +136,37 @@ function Dashboard() {
         a.click();
     }
 
+    const filteredLinks = useMemo(() => {
+        const q = searchQuery.toLowerCase().trim();
+        let result = links;
+
+        if (q) {
+            result = result.filter(
+                (link) =>
+                    link.shortId.toLowerCase().includes(q) ||
+                    link.url.toLowerCase().includes(q)
+            );
+        }
+
+        const sorted = [...result];
+        switch (sortBy) {
+            case 'oldest':
+                // Original chain order is oldest-first already
+                break;
+            case 'newest':
+                sorted.reverse();
+                break;
+            case 'most-visited':
+                sorted.sort((a, b) => (visitCounts[b.shortId] || 0) - (visitCounts[a.shortId] || 0));
+                break;
+            case 'least-visited':
+                sorted.sort((a, b) => (visitCounts[a.shortId] || 0) - (visitCounts[b.shortId] || 0));
+                break;
+        }
+
+        return sorted;
+    }, [links, searchQuery, sortBy, visitCounts]);
+
     return (
         <section className="dashboard-container">
             <div className="container py-5">
@@ -182,6 +217,39 @@ function Dashboard() {
                         ) : links.length === 0 ? (
                             <div className="alert alert-danger">No links found for this wallet.</div>
                         ) : (
+                            <>
+                            <div className="dashboard-toolbar">
+                                <div className="dashboard-search">
+                                    <i className="fas fa-search" />
+                                    <input
+                                        type="text"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        placeholder="Search by slug or URL..."
+                                        className="form-control form-control-sm"
+                                    />
+                                </div>
+                                <div className="dashboard-sort">
+                                    <label htmlFor="sort-select" className="small text-light me-2">Sort:</label>
+                                    <select
+                                        id="sort-select"
+                                        className="form-select form-select-sm"
+                                        value={sortBy}
+                                        onChange={(e) => setSortBy(e.target.value as SortOption)}
+                                    >
+                                        <option value="newest">Newest first</option>
+                                        <option value="oldest">Oldest first</option>
+                                        <option value="most-visited">Most visited</option>
+                                        <option value="least-visited">Least visited</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {filteredLinks.length === 0 ? (
+                                <p className="text-center text-muted my-4">
+                                    No links matching "{searchQuery}"
+                                </p>
+                            ) : (
                             <div className="table-responsive">
                                 <table className="table table-dark align-middle">
                                     <thead>
@@ -194,7 +262,7 @@ function Dashboard() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {links.map((link) => {
+                                        {filteredLinks.map((link) => {
                                             const shortUrl = `${PROJECT_URL}/#/${link.shortId}`;
                                             return (
                                                 <tr key={link.shortId}>
@@ -286,6 +354,8 @@ function Dashboard() {
                                     </tbody>
                                 </table>
                             </div>
+                            )}
+                            </>
                         )}
                     </div>
                 </div>

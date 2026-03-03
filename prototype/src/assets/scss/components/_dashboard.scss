@@ -11,6 +11,67 @@
     }
 }
 
+.dashboard-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.dashboard-search {
+    position: relative;
+    flex: 1;
+    min-width: 180px;
+
+    i {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: rgba(255, 255, 255, 0.4);
+        font-size: 13px;
+        pointer-events: none;
+    }
+
+    .form-control {
+        padding-left: 34px;
+        border-radius: $corner-radius;
+        border-top-left-radius: $corner-radius;
+    }
+}
+
+.dashboard-sort {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+
+    .form-select {
+        background-color: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: $white;
+        border-radius: $corner-radius;
+        font-size: 13px;
+        padding: 6px 30px 6px 10px;
+        width: auto;
+        transition: $transition;
+
+        &:hover {
+            border-color: $primary-color;
+        }
+
+        &:focus {
+            border-color: $primary-light;
+            box-shadow: 0 0 0 2px rgba(255, 160, 255, 0.75);
+        }
+
+        option {
+            background-color: $bg-color;
+            color: $white;
+        }
+    }
+}
+
 @keyframes shimmer {
     0% {
         background-position: -200% 0;
