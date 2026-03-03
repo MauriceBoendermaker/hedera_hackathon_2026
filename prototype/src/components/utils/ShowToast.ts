@@ -8,12 +8,22 @@ export function ShowToast(message: string, type: 'success' | 'danger') {
   toast.setAttribute('aria-live', 'assertive');
   toast.setAttribute('aria-atomic', 'true');
 
-  toast.innerHTML = `
-    <div class="d-flex">
-      <div class="toast-body">${message}</div>
-      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-    </div>
-  `;
+  const wrapper = document.createElement('div');
+  wrapper.className = 'd-flex';
+
+  const body = document.createElement('div');
+  body.className = 'toast-body';
+  body.textContent = message;
+
+  const closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.className = 'btn-close btn-close-white me-2 m-auto';
+  closeBtn.setAttribute('data-bs-dismiss', 'toast');
+  closeBtn.setAttribute('aria-label', 'Close');
+
+  wrapper.appendChild(body);
+  wrapper.appendChild(closeBtn);
+  toast.appendChild(wrapper);
 
   container.appendChild(toast);
 
