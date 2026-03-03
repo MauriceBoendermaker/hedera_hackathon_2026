@@ -122,11 +122,15 @@ function RedirectPage() {
         );
     }
 
-    let displayDomain = '';
+    let displayHost = '';
+    let displayPath = '';
     try {
-        displayDomain = new URL(destination).hostname;
+        const parsed = new URL(destination);
+        displayHost = parsed.hostname;
+        displayPath = parsed.pathname + parsed.search + parsed.hash;
+        if (displayPath === '/') displayPath = '';
     } catch {
-        displayDomain = destination;
+        displayHost = destination;
     }
 
     const progress = ((COUNTDOWN_SECONDS - countdown) / COUNTDOWN_SECONDS) * 100;
@@ -156,7 +160,8 @@ function RedirectPage() {
                 <p className="redirect-label">Redirecting you to</p>
                 <p className="redirect-destination" title={destination}>
                     <i className="fas fa-arrow-up-right-from-square" />{' '}
-                    {displayDomain}
+                    <strong>{displayHost}</strong>
+                    {displayPath && <span className="redirect-destination-path">{displayPath}</span>}
                 </p>
 
                 <div className="redirect-progress-bar">
