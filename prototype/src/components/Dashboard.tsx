@@ -104,8 +104,13 @@ function Dashboard() {
         loadLinks(abortController.signal);
 
         let pollFailures = 0;
+        let paused = document.hidden;
+
+        const handleVisibility = () => { paused = document.hidden; };
+        document.addEventListener('visibilitychange', handleVisibility);
+
         const statsInterval = setInterval(async () => {
-            if (abortController.signal.aborted) return;
+            if (paused || abortController.signal.aborted) return;
             const currentSlugs = slugsRef.current;
             if (currentSlugs.length === 0) return;
             try {
@@ -135,6 +140,7 @@ function Dashboard() {
         return () => {
             abortController.abort();
             clearInterval(statsInterval);
+            document.removeEventListener('visibilitychange', handleVisibility);
         };
     }, [loadLinks, retryCount]);
 
