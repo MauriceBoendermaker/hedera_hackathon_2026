@@ -16,6 +16,7 @@ export function UrlForms() {
     const [shortUrl, setShortUrl] = useState('');
     const [shortUrlExistsError, setShortUrlExistsError] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [checkingSlug, setCheckingSlug] = useState(false);
     const [slugHint, setSlugHint] = useState('');
 
     const hasWallet = typeof window !== 'undefined' && !!window.ethereum;
@@ -112,7 +113,13 @@ export function UrlForms() {
                     return;
                 }
 
-                const exists = await contract.shortIdExists(customId);
+                setCheckingSlug(true);
+                let exists: boolean;
+                try {
+                    exists = await contract.shortIdExists(customId);
+                } finally {
+                    setCheckingSlug(false);
+                }
                 if (exists) {
                     setShortUrlExistsError(true);
                     ShowToast('That short URL is already taken', 'danger');
@@ -305,8 +312,10 @@ export function UrlForms() {
                                     />
                                 </div>
                                 <div className="slug-feedback mt-1">
-                                    <span className={`slug-hint ${slugHint ? 'visible' : ''}`}>
-                                        {slugHint || '\u00A0'}
+                                    <span className={`slug-hint ${slugHint || checkingSlug ? 'visible' : ''}`}>
+                                        {checkingSlug
+                                            ? <><span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true" />Checking availability...</>
+                                            : slugHint || '\u00A0'}
                                     </span>
                                     <span className={`slug-counter ${isOverLimit ? 'slug-counter--over' : ''}`}>
                                         {slugLength}/{MAX_SLUG_LENGTH}
