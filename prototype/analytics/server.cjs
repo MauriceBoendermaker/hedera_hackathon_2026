@@ -87,6 +87,37 @@ function sanitizeString(val, maxLen) {
     return val.replace(/[\x00-\x1F\x7F]/g, '').slice(0, maxLen);
 }
 
+// ── Bot detection ──────────────────────────────────────────────────────
+const BOT_UA_PATTERN = /bot|crawl|spider|slurp|facebookexternalhit|bingpreview|linkedinbot|embedly|quora link|showyoubot|outbrain|pinterest|applebot|googlebot|bingbot|yandexbot|duckduckbot|baiduspider|sogou|exabot|semrushbot|ahrefsbot|mj12bot|dotbot|petalbot|bytespider|gptbot|chatgpt|claudebot/i;
+
+function isBot(ua) {
+    return BOT_UA_PATTERN.test(ua);
+}
+
+// ── Visit deduplication (IP + shortId, 10-min window) ──────────────────
+const recentVisits = {};          // key → expireAt
+const DEDUP_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+
+// Piggy-back on the existing cleanup interval for stale dedup entries
+setInterval(() => {
+    const now = Date.now();
+    for (const key in recentVisits) {
+        if (recentVisits[key] <= now) delete recentVisits[key];
+    }
+}, CLEANUP_INTERVAL);
+
+/**
+ * Returns true if this IP+shortId combo was already seen within the window.
+ * Marks it as seen if not.
+ */
+function isDuplicateVisit(ip, shortId) {
+    const key = `dedup:${ip}:${shortId}`;
+    const now = Date.now();
+    if (recentVisits[key] && recentVisits[key] > now) return true;
+    recentVisits[key] = now + DEDUP_WINDOW_MS;
+    return false;
+}
+
 app.post('/track', (req, res) => {
     const { shortId, timestamp, referrer, userAgent } = req.body;
 
@@ -106,7 +137,17 @@ app.post('/track', (req, res) => {
     const cleanReferrer = sanitizeString(referrer, MAX_REFERRER_LEN);
     const cleanUA = sanitizeString(userAgent, MAX_UA_LEN);
 
+    // ── Filter bots (silent 200 — don't break redirects, just skip logging) ──
+    if (isBot(cleanUA)) {
+        return res.sendStatus(200);
+    }
+
     const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+
+    // ── Deduplicate (same IP + shortId within 10 min → skip logging) ──
+    if (isDuplicateVisit(ip, shortId)) {
+        return res.sendStatus(200);
+    }
 
     // 1 track per shortId per IP per minute
     if (isRateLimited(`track:${ip}:${shortId}`, 1, 60000)) {
