@@ -62,12 +62,19 @@ function Dashboard() {
             const shortIds: string[] = await contract.getUserLinks(address);
             if (signal.aborted) return;
 
-            const formatted = await Promise.all(
-                shortIds.map(async (shortId) => {
-                    const url = await contract.getOriginalUrl(shortId);
-                    return { shortId, url };
-                })
-            );
+            const BATCH_SIZE = 5;
+            const formatted: { shortId: string; url: string }[] = [];
+            for (let i = 0; i < shortIds.length; i += BATCH_SIZE) {
+                if (signal.aborted) return;
+                const batch = shortIds.slice(i, i + BATCH_SIZE);
+                const results = await Promise.all(
+                    batch.map(async (shortId) => {
+                        const url = await contract.getOriginalUrl(shortId);
+                        return { shortId, url };
+                    })
+                );
+                formatted.push(...results);
+            }
 
             if (!signal.aborted) {
                 setLinks(formatted);
