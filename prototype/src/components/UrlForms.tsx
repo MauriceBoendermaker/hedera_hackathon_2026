@@ -277,25 +277,34 @@ export function UrlForms() {
                 </div>
             </form>
 
-            {status && <div className="alert alert-info mt-3">{status}</div>}
+            {status && !txHash && (
+                <div className="status-banner mt-3">
+                    <i className="fas fa-circle-notch fa-spin" />
+                    <span>{status}</span>
+                </div>
+            )}
 
             {txHash && (() => {
                 const fullUrl = `${PROJECT_URL}/#/${generatedShortId}`;
                 const shareText = `Check out my decentralized short link: ${fullUrl}`;
                 return (
-                    <div className="alert alert-success mt-3">
-                        <strong>Link created!</strong><br />
-                        Short URL:{' '}
-                        <a
-                            href={fullUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                        >
-                            {fullUrl}
-                        </a>
-                        <div className="d-flex flex-wrap gap-2 mt-3">
+                    <div className="link-created-card mt-3">
+                        <div className="link-created-card__header">
+                            <i className="fas fa-check-circle" />
+                            <span>Link created</span>
+                        </div>
+
+                        <div className="link-created-card__url-row">
+                            <a
+                                href={fullUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="link-created-card__url"
+                            >
+                                {fullUrl}
+                            </a>
                             <button
-                                className="btn btn-sm btn-outline-light"
+                                className="link-created-card__copy-btn"
                                 onClick={async () => {
                                     try {
                                         await navigator.clipboard.writeText(fullUrl);
@@ -306,10 +315,13 @@ export function UrlForms() {
                                 }}
                                 title="Copy short link"
                             >
-                                <i className="fas fa-copy" /> Copy
+                                <i className="fas fa-copy" />
                             </button>
+                        </div>
+
+                        <div className="link-created-card__actions">
                             <a
-                                className="btn btn-sm btn-outline-light"
+                                className="link-created-card__action-btn"
                                 href={`https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -318,7 +330,7 @@ export function UrlForms() {
                                 <i className="fab fa-x-twitter" /> X
                             </a>
                             <a
-                                className="btn btn-sm btn-outline-light"
+                                className="link-created-card__action-btn"
                                 href={`https://wa.me/?text=${encodeURIComponent(shareText)}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -327,7 +339,7 @@ export function UrlForms() {
                                 <i className="fab fa-whatsapp" /> WhatsApp
                             </a>
                             <a
-                                className="btn btn-sm btn-outline-light"
+                                className="link-created-card__action-btn"
                                 href={`https://t.me/share/url?url=${encodeURIComponent(fullUrl)}&text=${encodeURIComponent('Check out my decentralized short link!')}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -336,7 +348,7 @@ export function UrlForms() {
                                 <i className="fab fa-telegram" /> Telegram
                             </a>
                             <a
-                                className="btn btn-sm btn-outline-light"
+                                className="link-created-card__action-btn link-created-card__action-btn--accent"
                                 href={getHashScanTxUrl(txHash)}
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -345,6 +357,12 @@ export function UrlForms() {
                                 <i className="fas fa-external-link-alt" /> HashScan
                             </a>
                         </div>
+
+                        {status && (
+                            <div className="link-created-card__block-info">
+                                {status}
+                            </div>
+                        )}
                     </div>
                 );
             })()}
