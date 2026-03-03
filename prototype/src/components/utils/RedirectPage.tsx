@@ -4,7 +4,7 @@ import { ethers } from 'ethers';
 import abi from '../../abi_hedera.json';
 
 const CONTRACT_ADDRESS = process.env.REACT_APP_CONTRACT_ADDRESS as string;
-const INFURA_URL = process.env.REACT_APP_INFURA_URL as string;
+const HEDERA_RPC_URL = process.env.REACT_APP_HEDERA_RPC_URL as string;
 
 function RedirectPage() {
     const { shortId } = useParams() as { shortId: string };
@@ -16,7 +16,7 @@ function RedirectPage() {
             const id2 = shortId;
 
             try {
-                const provider = new ethers.JsonRpcProvider(INFURA_URL);
+                const provider = new ethers.JsonRpcProvider(HEDERA_RPC_URL);
                 const contract = new ethers.Contract(CONTRACT_ADDRESS, abi, provider);
                 console.log("Connected to contract:", contract.address);
 
