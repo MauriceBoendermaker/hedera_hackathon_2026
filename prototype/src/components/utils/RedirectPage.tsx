@@ -5,6 +5,7 @@ import abi from '../../abi_hedera.json';
 
 const CONTRACT_ADDRESS = process.env.REACT_APP_CONTRACT_ADDRESS as string;
 const HEDERA_RPC_URL = process.env.REACT_APP_HEDERA_RPC_URL as string;
+const ANALYTICS_URL = process.env.REACT_APP_ANALYTICS_URL as string;
 
 function RedirectPage() {
     const { shortId } = useParams() as { shortId: string };
@@ -40,7 +41,7 @@ function RedirectPage() {
                 }
 
                 try {
-                    await fetch('http://localhost:5001/track', {
+                    await fetch(`${ANALYTICS_URL}/track`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({

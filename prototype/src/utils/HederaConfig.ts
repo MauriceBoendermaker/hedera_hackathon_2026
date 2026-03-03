@@ -10,3 +10,7 @@ export function getHashScanTxUrl(txHash: string): string {
 export function getHashScanContractUrl(contractAddress: string): string {
   return `${HEDERA_EXPLORER_URL}/contract/${contractAddress}`;
 }
+
+export function getHashScanTopicUrl(topicId: string): string {
+  return `${HEDERA_EXPLORER_URL}/topic/${topicId}`;
+}

@@ -7,6 +7,7 @@ import { getHashScanTxUrl } from 'utils/HederaConfig';
 
 const CONTRACT_ADDRESS = process.env.REACT_APP_CONTRACT_ADDRESS as string;
 const PROJECT_URL = process.env.REACT_APP_PROJECT_URL as string;
+const ANALYTICS_URL = process.env.REACT_APP_ANALYTICS_URL as string;
 
 function Dashboard() {
     const [account, setAccount] = useState('');
@@ -21,7 +22,7 @@ function Dashboard() {
             if (!window.ethereum) return;
 
             try {
-                const res = await fetch('http://localhost:5001/stats');
+                const res = await fetch(`${ANALYTICS_URL}/stats`);
                 const stats = await res.json();
                 setVisitCounts(stats);
             } catch (e) {
@@ -71,7 +72,7 @@ function Dashboard() {
 
         const statsInterval = setInterval(async () => {
             try {
-                const res = await fetch('http://localhost:5001/stats');
+                const res = await fetch(`${ANALYTICS_URL}/stats`);
                 const stats = await res.json();
                 setVisitCounts(stats);
             } catch (e) {
