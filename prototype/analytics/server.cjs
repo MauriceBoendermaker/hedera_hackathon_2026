@@ -74,8 +74,38 @@ app.use((req, res, next) => {
     next();
 });
 
+// ── /track input validation ────────────────────────────────────────────
+const VALID_SHORT_ID = /^[a-zA-Z0-9_-]{1,32}$/;
+const MAX_REFERRER_LEN = 2048;
+const MAX_UA_LEN = 512;
+// Accept timestamps within ±5 minutes of server time
+const TIMESTAMP_DRIFT_MS = 5 * 60 * 1000;
+
+function sanitizeString(val, maxLen) {
+    if (typeof val !== 'string') return '';
+    // Strip control characters (keep printable ASCII + common UTF-8)
+    return val.replace(/[\x00-\x1F\x7F]/g, '').slice(0, maxLen);
+}
+
 app.post('/track', (req, res) => {
     const { shortId, timestamp, referrer, userAgent } = req.body;
+
+    // ── Validate shortId (required, must match slug format) ──
+    if (!shortId || typeof shortId !== 'string' || !VALID_SHORT_ID.test(shortId)) {
+        return res.status(400).json({ error: 'Invalid or missing shortId.' });
+    }
+
+    // ── Validate & clamp timestamp ──
+    const now = Date.now();
+    let ts = Number(timestamp);
+    if (!Number.isFinite(ts) || Math.abs(ts - now) > TIMESTAMP_DRIFT_MS) {
+        ts = now; // Replace out-of-range or garbage values with server time
+    }
+
+    // ── Sanitize optional strings ──
+    const cleanReferrer = sanitizeString(referrer, MAX_REFERRER_LEN);
+    const cleanUA = sanitizeString(userAgent, MAX_UA_LEN);
+
     const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
 
     // 1 track per shortId per IP per minute
@@ -85,9 +115,9 @@ app.post('/track', (req, res) => {
 
     const entry = {
         shortId,
-        timestamp: timestamp || Date.now(),
-        referrer,
-        userAgent,
+        timestamp: ts,
+        referrer: cleanReferrer,
+        userAgent: cleanUA,
         ip
     };
 
