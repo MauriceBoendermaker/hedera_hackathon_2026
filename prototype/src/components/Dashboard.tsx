@@ -7,6 +7,7 @@ import { getHashScanTxUrl, CONTRACT_ADDRESS, PROJECT_URL, ANALYTICS_URL } from '
 import { safeGetItem } from 'utils/safeStorage';
 
 type SortOption = 'newest' | 'oldest' | 'most-visited' | 'least-visited';
+const LINKS_PER_PAGE = 25;
 
 function Dashboard() {
     const [account, setAccount] = useState('');
@@ -17,6 +18,7 @@ function Dashboard() {
     const [visitCounts, setVisitCounts] = useState<Record<string, number>>({});
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState<SortOption>('newest');
+    const [page, setPage] = useState(1);
     const [retryCount, setRetryCount] = useState(0);
     const slugsRef = useRef<string[]>([]);
 
@@ -196,6 +198,16 @@ function Dashboard() {
         return sorted;
     }, [links, searchQuery, sortBy, visitCounts]);
 
+    const totalPages = Math.max(1, Math.ceil(filteredLinks.length / LINKS_PER_PAGE));
+    const safePage = Math.min(page, totalPages);
+    const paginatedLinks = filteredLinks.slice(
+        (safePage - 1) * LINKS_PER_PAGE,
+        safePage * LINKS_PER_PAGE,
+    );
+
+    // Reset to page 1 when filters change
+    useEffect(() => { setPage(1); }, [searchQuery, sortBy]);
+
     return (
         <section className="dashboard-container">
             <div className="container py-5">
@@ -309,7 +321,7 @@ function Dashboard() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {filteredLinks.map((link) => {
+                                        {paginatedLinks.map((link) => {
                                             const shortUrl = `${PROJECT_URL}/#/${link.shortId}`;
                                             return (
                                                 <tr key={link.shortId}>
@@ -408,7 +420,7 @@ function Dashboard() {
 
                             {/* Mobile cards */}
                             <div className="link-cards d-md-none">
-                                {filteredLinks.map((link) => {
+                                {paginatedLinks.map((link) => {
                                     const shortUrl = `${PROJECT_URL}/#/${link.shortId}`;
                                     const txHash = safeGetItem(`txHash_${link.shortId}`);
                                     return (
@@ -475,6 +487,30 @@ function Dashboard() {
                                     );
                                 })}
                             </div>
+
+                            {totalPages > 1 && (
+                                <nav aria-label="Links pagination" className="d-flex justify-content-center align-items-center gap-3 mt-3">
+                                    <button
+                                        className="btn btn-sm btn-outline-light"
+                                        disabled={safePage <= 1}
+                                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                                        aria-label="Previous page"
+                                    >
+                                        <i className="fas fa-chevron-left" />
+                                    </button>
+                                    <span className="text-light small">
+                                        Page {safePage} of {totalPages}
+                                    </span>
+                                    <button
+                                        className="btn btn-sm btn-outline-light"
+                                        disabled={safePage >= totalPages}
+                                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                        aria-label="Next page"
+                                    >
+                                        <i className="fas fa-chevron-right" />
+                                    </button>
+                                </nav>
+                            )}
                             </>)}
                             </>
                         )}
