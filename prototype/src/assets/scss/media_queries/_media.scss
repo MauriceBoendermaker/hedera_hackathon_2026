@@ -1,27 +1,207 @@
-@media (max-width: 1399.98px) {
+// ── Tablet landscape ────────────────────────────────────────────────
+@media (max-width: 1399.98px) {}
 
-}
+@media (max-width: 1199.98px) {}
 
-@media (max-width: 1199.98px) {
-
-}
-
+// ── Tablet portrait ────────────────────────────────────────────────
 @media (max-width: 991.98px) {
-    
+    .dashboard-container {
+        align-items: flex-start;
+        padding-top: 100px;
+        padding-bottom: 40px;
+        min-height: unset;
+    }
 }
 
+// ── Large phones ───────────────────────────────────────────────────
 @media (max-width: 767.98px) {
+    .glass-card {
+        max-height: unset;
+        overflow-y: auto;
+        padding: 20px;
+    }
 
+    .title {
+        font-size: 28px;
+    }
+
+    .subtitle-glow {
+        font-size: 17px;
+    }
+
+    .title-glow {
+        font-size: 22px;
+    }
+
+    .button-group {
+        flex-direction: column;
+        gap: 10px;
+
+        button:not(:first-child) {
+            margin-left: 0;
+        }
+    }
+
+    .link-created-card {
+        padding: 16px;
+
+        &__url-row {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 8px;
+        }
+
+        &__copy-btn {
+            width: 100%;
+            height: 36px;
+        }
+
+        &__actions {
+            flex-direction: column;
+
+            .link-created-card__action-btn {
+                justify-content: center;
+            }
+        }
+    }
+
+    .dashboard-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .dashboard-sort {
+        width: 100%;
+
+        .form-select {
+            width: 100%;
+        }
+    }
+
+    .redirect-card {
+        padding: 30px 20px;
+    }
+
+    .redirect-brand {
+        font-size: 24px;
+
+        small {
+            font-size: 16px;
+        }
+    }
+
+    .redirect-destination {
+        font-size: 15px;
+    }
 }
 
+// ── Small phones ───────────────────────────────────────────────────
 @media (max-width: 575.98px) {
+    .glass-card {
+        padding: 16px;
+    }
 
+    .title {
+        font-size: 24px;
+    }
+
+    .subtitle-glow {
+        font-size: 15px;
+    }
+
+    .title-glow {
+        font-size: 20px;
+    }
+
+    .metamask-banner {
+        padding: 10px 14px;
+        font-size: 13px;
+    }
+
+    .status-banner {
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+
+    .link-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+
+        a, code {
+            font-size: 14px !important;
+        }
+    }
+
+    .link-card-actions {
+        flex-direction: column;
+
+        .btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+
+    .btn-primary {
+        font-size: 12px;
+        letter-spacing: 0.5px;
+        padding: 10px;
+    }
+
+    .footer-parent {
+        p {
+            font-size: 12px;
+        }
+    }
+
+    .redirect-countdown-ring {
+        width: 80px;
+        height: 80px;
+    }
+
+    .redirect-countdown-number {
+        font-size: 28px;
+    }
 }
 
+// ── Extra small phones ─────────────────────────────────────────────
 @media (max-width: 479.98px) {
+    .title {
+        font-size: 20px;
+    }
 
+    .glass-card {
+        padding: 12px;
+    }
+
+    .nav-tabs {
+        width: 100%;
+
+        .nav-item {
+            flex: 1;
+
+            button {
+                width: 100%;
+                padding: 8px 10px;
+                font-size: 12px;
+            }
+        }
+    }
+
+    .input-group-text {
+        font-size: 11px;
+        padding: 8px;
+    }
 }
 
+// ── Tiny screens ───────────────────────────────────────────────────
 @media (max-width: 319.98px) {
+    .title {
+        font-size: 18px;
+    }
 
+    .glass-card {
+        padding: 10px;
+        border-radius: 4px;
+    }
 }
