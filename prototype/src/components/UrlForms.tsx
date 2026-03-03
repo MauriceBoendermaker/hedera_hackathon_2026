@@ -17,6 +17,7 @@ export function UrlForms() {
     const [isCustomMode, setIsCustomMode] = useState(true);
     const [shortUrl, setShortUrl] = useState('');
     const [shortUrlExistsError, setShortUrlExistsError] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
 
     function isValidUrl(string: string) {
         try {
@@ -66,7 +67,9 @@ export function UrlForms() {
         e.preventDefault();
 
         if (!validateInputUrl()) return;
+        if (submitting) return;
 
+        setSubmitting(true);
         try {
             await switchToHedera();
 
@@ -141,6 +144,8 @@ export function UrlForms() {
                 setStatus('');
                 ShowToast('Transaction failed: ' + (err.message || 'Unknown error'), 'danger');
             }
+        } finally {
+            setSubmitting(false);
         }
     }
 
@@ -213,8 +218,8 @@ export function UrlForms() {
                 </div>
 
                 <div className="button-group mt-3">
-                    <button type="submit" className="btn btn-primary w-100">
-                        Submit to Blockchain
+                    <button type="submit" className="btn btn-primary w-100" disabled={submitting}>
+                        {submitting ? 'Submitting...' : 'Submit to Blockchain'}
                     </button>
                 </div>
 
