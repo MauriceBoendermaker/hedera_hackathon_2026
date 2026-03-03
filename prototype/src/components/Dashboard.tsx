@@ -5,6 +5,7 @@ import { ShowToast } from './utils/ShowToast';
 import QRModal from './utils/QRModal';
 import { getHashScanTxUrl, CONTRACT_ADDRESS, PROJECT_URL, ANALYTICS_URL } from 'utils/HederaConfig';
 import { safeGetItem } from 'utils/safeStorage';
+import { Link } from 'react-router-dom';
 
 type SortOption = 'newest' | 'oldest' | 'most-visited' | 'least-visited';
 const LINKS_PER_PAGE = 25;
@@ -299,9 +300,9 @@ function Dashboard() {
                                 <i className="fas fa-link" />
                                 <h4>No links yet</h4>
                                 <p>Create your first decentralized short link to see it here.</p>
-                                <a href="/#/" className="btn btn-primary">
+                                <Link to="/" className="btn btn-primary">
                                     Shorten a link
-                                </a>
+                                </Link>
                             </div>
                         ) : (
                             <>
