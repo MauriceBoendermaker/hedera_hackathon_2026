@@ -77,14 +77,24 @@ app.use((req, res, next) => {
 // ── Health check ───────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
     fs.access(LOG_FILE, fs.constants.R_OK | fs.constants.W_OK, (err) => {
-        const logOk = !err;
-        const status = logOk ? 'ok' : 'degraded';
-        const code = logOk ? 200 : 503;
+        let logStatus = 'readable';
+        let healthy = true;
 
-        res.status(code).json({
-            status,
+        if (err) {
+            if (err.code === 'ENOENT') {
+                // File doesn't exist yet — normal before first /track call
+                logStatus = 'not_created';
+            } else {
+                // File exists but permissions are broken
+                logStatus = 'inaccessible';
+                healthy = false;
+            }
+        }
+
+        res.status(healthy ? 200 : 503).json({
+            status: healthy ? 'ok' : 'degraded',
             uptime: Math.floor(process.uptime()),
-            log: logOk ? 'readable' : 'inaccessible',
+            log: logStatus,
             hcs: hederaClient ? 'configured' : 'disabled',
         });
     });
