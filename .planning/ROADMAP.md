@@ -12,7 +12,7 @@ DURL is a working decentralized URL shortener on Gnosis Chain being migrated to 
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Hedera EVM Migration** - Migrate chain config, remove Circles SDK, deploy payable contract, enable HBAR payments
+- [x] **Phase 1: Hedera EVM Migration** - Migrate chain config, remove Circles SDK, deploy payable contract, enable HBAR payments (completed 2026-03-03)
 - [ ] **Phase 2: HCS Audit Trail + Dual Proof UI** - Add HCS logging for every URL creation and surface both EVM + HCS proofs in the UI
 - [ ] **Phase 3: Docs and Demo Polish** - Write design decisions document and harden the demo setup for hackathon submission
 
@@ -69,6 +69,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Hedera EVM Migration | 2/3 | In progress | - |
+| 1. Hedera EVM Migration | 3/3 | Complete   | 2026-03-03 |
 | 2. HCS Audit Trail + Dual Proof UI | 0/TBD | Not started | - |
 | 3. Docs and Demo Polish | 0/TBD | Not started | - |
