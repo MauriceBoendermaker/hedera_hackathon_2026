@@ -1,0 +1,137 @@
+.redirect-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.redirect-card {
+    max-width: 420px;
+    width: 100%;
+    padding: 40px 30px;
+    max-height: unset;
+    overflow: visible;
+}
+
+.redirect-brand {
+    color: $secondary-color;
+    font-family: "Roboto Slab", serif;
+    font-size: 28px;
+    font-weight: 500;
+    user-select: none;
+    margin-bottom: 24px;
+
+    small {
+        font-family: "Roboto Slab", serif;
+        font-size: 20px;
+        font-weight: 200;
+        opacity: 0.75;
+    }
+}
+
+.redirect-icon {
+    margin-bottom: 16px;
+
+    i {
+        font-size: 32px;
+        color: $primary-light;
+    }
+
+    &--error i {
+        color: $bad-red;
+    }
+}
+
+.redirect-countdown-ring {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    margin: 0 auto 20px;
+
+    svg {
+        width: 100%;
+        height: 100%;
+        transform: rotate(-90deg);
+    }
+}
+
+.redirect-ring-bg {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.1);
+    stroke-width: 5;
+}
+
+.redirect-ring-fill {
+    fill: none;
+    stroke: $secondary-color;
+    stroke-width: 5;
+    stroke-linecap: round;
+    stroke-dasharray: 264;
+    stroke-dashoffset: 264;
+    transition: stroke-dashoffset 1s linear;
+    filter: drop-shadow(0 0 6px rgba(0, 255, 224, 0.4));
+}
+
+.redirect-countdown-number {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    font-weight: 700;
+    color: $white;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.redirect-label {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.redirect-destination {
+    color: $secondary-color;
+    font-size: 18px;
+    font-weight: 600;
+    word-break: break-all;
+    margin-bottom: 16px;
+
+    i {
+        font-size: 14px;
+        margin-right: 4px;
+        opacity: 0.75;
+    }
+}
+
+.redirect-progress-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.redirect-progress-fill {
+    height: 100%;
+    background: linear-gradient(to right, $primary-light, $secondary-color);
+    border-radius: 2px;
+    transition: width 1s linear;
+}
+
+.redirect-powered {
+    margin-top: 20px;
+    margin-bottom: 0;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.35);
+
+    a {
+        color: $primary-light;
+        text-decoration: none;
+
+        &:hover {
+            color: $secondary-color;
+        }
+    }
+}
