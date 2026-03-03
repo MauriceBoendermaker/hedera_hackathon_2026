@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 import Nav from './components/misc/Nav';
 import { Footer } from './components/misc/Footer';
@@ -11,6 +11,23 @@ import About from './components/About';
 import { ErrorBoundary } from './components/utils/ErrorBoundary';
 
 import "./assets/scss/style.scss";
+
+function AnimatedRoutes() {
+  const location = useLocation();
+
+  return (
+    <div key={location.pathname} className="page-transition">
+      <Routes location={location}>
+        <Route path="/" element={<ShortenPage />} />
+        <Route path="/how-it-works" element={<HowItWorks />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/:shortId" element={<RedirectPage />} />
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </div>
+  );
+}
 
 function App() {
   useEffect(() => {
@@ -59,14 +76,7 @@ function App() {
     <Router>
       <Nav />
 
-      <Routes>
-        <Route path="/" element={<ShortenPage />} />
-        <Route path="/how-it-works" element={<HowItWorks />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/:shortId" element={<RedirectPage />} />
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
+      <AnimatedRoutes />
 
       <Footer />
       <div
