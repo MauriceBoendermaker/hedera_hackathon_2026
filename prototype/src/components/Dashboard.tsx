@@ -26,6 +26,10 @@ function Dashboard() {
 
             try {
                 const res = await fetch(`${ANALYTICS_URL}/stats`, { signal: abortController.signal });
+                if (res.status === 429) {
+                    if (!cancelled) ShowToast('Rate limit reached — stats requests are temporarily throttled.', 'danger');
+                    return;
+                }
                 if (!res.ok) throw new Error(`Stats request failed (${res.status})`);
                 const stats = await res.json();
                 if (!cancelled) setVisitCounts(stats);
@@ -91,6 +95,10 @@ function Dashboard() {
             if (cancelled) return;
             try {
                 const res = await fetch(`${ANALYTICS_URL}/stats`, { signal: abortController.signal });
+                if (res.status === 429) {
+                    if (!cancelled) ShowToast('Rate limit reached — stats requests are temporarily throttled.', 'danger');
+                    return;
+                }
                 if (!res.ok) throw new Error(`Stats request failed (${res.status})`);
                 const stats = await res.json();
                 if (!cancelled) {

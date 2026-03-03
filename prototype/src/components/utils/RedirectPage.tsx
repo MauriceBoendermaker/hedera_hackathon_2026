@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { ethers } from 'ethers';
 import abi from '../../abi_hedera.json';
 import { CONTRACT_ADDRESS, HEDERA_RPC_URL, ANALYTICS_URL } from 'utils/HederaConfig';
+import { ShowToast } from './ShowToast';
 
 const COUNTDOWN_SECONDS = 3;
 
@@ -47,6 +48,10 @@ function RedirectPage() {
                         referrer: document.referrer,
                         userAgent: navigator.userAgent
                     })
+                }).then(res => {
+                    if (res.status === 429) {
+                        ShowToast('Rate limit reached — this visit was not counted.', 'danger');
+                    }
                 }).catch(() => {});
 
                 setDestination(dest);

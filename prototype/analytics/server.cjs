@@ -13,6 +13,34 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 const LOG_FILE = path.join(__dirname, 'logs.json');
 
+// ── Rate-limiting helpers ──────────────────────────────────────────────
+const rateBuckets = {};          // key → { count, resetAt }
+const CLEANUP_INTERVAL = 60000;  // purge stale entries every 60 s
+
+setInterval(() => {
+  const now = Date.now();
+  for (const key in rateBuckets) {
+    if (rateBuckets[key].resetAt <= now) delete rateBuckets[key];
+  }
+}, CLEANUP_INTERVAL);
+
+/**
+ * Returns true if the request should be blocked.
+ * @param {string} key   – unique bucket identifier (e.g. "track:<ip>:<shortId>" or "stats:<ip>")
+ * @param {number} max   – max requests allowed in the window
+ * @param {number} windowMs – window length in milliseconds
+ */
+function isRateLimited(key, max, windowMs) {
+  const now = Date.now();
+  const bucket = rateBuckets[key];
+  if (!bucket || bucket.resetAt <= now) {
+    rateBuckets[key] = { count: 1, resetAt: now + windowMs };
+    return false;
+  }
+  bucket.count++;
+  return bucket.count > max;
+}
+
 // HCS configuration — server-side only, no REACT_APP_ prefix for secrets
 const OPERATOR_ID = process.env.OPERATOR_ID;
 const OPERATOR_KEY = process.env.OPERATOR_KEY;
@@ -50,6 +78,11 @@ app.post('/track', (req, res) => {
     const { shortId, timestamp, referrer, userAgent } = req.body;
     const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
 
+    // 1 track per shortId per IP per minute
+    if (isRateLimited(`track:${ip}:${shortId}`, 1, 60000)) {
+        return res.status(429).json({ error: 'Rate limit exceeded. Try again in a minute.' });
+    }
+
     const entry = {
         shortId,
         timestamp: timestamp || Date.now(),
@@ -79,6 +112,13 @@ app.post('/track', (req, res) => {
 });
 
 app.get('/stats', (req, res) => {
+    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+
+    // 30 stats requests per IP per minute
+    if (isRateLimited(`stats:${ip}`, 30, 60000)) {
+        return res.status(429).json({ error: 'Too many requests. Please wait before refreshing stats.' });
+    }
+
     fs.readFile(LOG_FILE, 'utf8', (err, data) => {
         if (err) return res.status(500).send('Failed to read logs');
 
