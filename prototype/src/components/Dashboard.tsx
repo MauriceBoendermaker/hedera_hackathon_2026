@@ -3,11 +3,7 @@ import { ethers } from 'ethers';
 import abi from '../abi_hedera.json';
 import { ShowToast } from './utils/ShowToast';
 import QRModal from './utils/QRModal';
-import { getHashScanTxUrl } from 'utils/HederaConfig';
-
-const CONTRACT_ADDRESS = process.env.REACT_APP_CONTRACT_ADDRESS as string;
-const PROJECT_URL = process.env.REACT_APP_PROJECT_URL as string;
-const ANALYTICS_URL = process.env.REACT_APP_ANALYTICS_URL as string;
+import { getHashScanTxUrl, CONTRACT_ADDRESS, PROJECT_URL, ANALYTICS_URL } from 'utils/HederaConfig';
 
 function Dashboard() {
     const [account, setAccount] = useState('');

@@ -2,9 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import MouseDots from './misc/MouseDots';
 import { QRCodeCanvas } from 'qrcode.react';
 import { UrlForms } from './UrlForms';
-import { getHashScanTxUrl } from 'utils/HederaConfig';
-
-const PROJECT_URL = process.env.REACT_APP_PROJECT_URL as string;
+import { getHashScanTxUrl, PROJECT_URL } from 'utils/HederaConfig';
 
 declare global {
     interface Window {

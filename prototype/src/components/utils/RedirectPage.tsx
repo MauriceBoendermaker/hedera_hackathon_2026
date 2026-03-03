@@ -2,10 +2,7 @@ import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { ethers } from 'ethers';
 import abi from '../../abi_hedera.json';
-
-const CONTRACT_ADDRESS = process.env.REACT_APP_CONTRACT_ADDRESS as string;
-const HEDERA_RPC_URL = process.env.REACT_APP_HEDERA_RPC_URL as string;
-const ANALYTICS_URL = process.env.REACT_APP_ANALYTICS_URL as string;
+import { CONTRACT_ADDRESS, HEDERA_RPC_URL, ANALYTICS_URL } from 'utils/HederaConfig';
 
 function RedirectPage() {
     const { shortId } = useParams() as { shortId: string };

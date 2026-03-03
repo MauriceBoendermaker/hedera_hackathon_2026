@@ -3,10 +3,7 @@ import { ethers } from 'ethers';
 import abi from '../abi_hedera.json';
 import { ShowToast } from './utils/ShowToast';
 import { switchToHedera } from 'utils/NetworkSwitcher';
-import { getHashScanTxUrl } from 'utils/HederaConfig';
-
-const CONTRACT_ADDRESS = process.env.REACT_APP_CONTRACT_ADDRESS as string;
-const PROJECT_URL = process.env.REACT_APP_PROJECT_URL as string;
+import { getHashScanTxUrl, CONTRACT_ADDRESS, PROJECT_URL } from 'utils/HederaConfig';
 
 export function UrlForms() {
     const [originalUrl, setOriginalUrl] = useState('');
