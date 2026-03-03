@@ -359,7 +359,7 @@ app.post('/hcs/submit', async (req, res) => {
 
     return res.json({ sequenceNumber, topicId: HCS_TOPIC_ID });
   } catch (err) {
-    log.error({ err: err.message, reqId: req.id }, 'HCS submit failed');
+    log.error({ err, reqId: req.id }, 'HCS submit failed');
     if (err.message === 'HCS_TIMEOUT') {
       return res.status(504).json({ error: 'HCS submission timed out' });
     }
