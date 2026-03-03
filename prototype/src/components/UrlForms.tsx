@@ -282,7 +282,7 @@ export function UrlForms() {
                                             setUrlInvalid(false);
                                             setShortUrlExistsError(false);
                                         }}
-                                        maxLength={MAX_SLUG_LENGTH + 1}
+                                        maxLength={MAX_SLUG_LENGTH + 1} /* +1 accounts for the leading "/" prefix */
                                         placeholder="custom-link"
                                         className={`form-control ${shortUrlExistsError || isOverLimit ? 'is-invalid' : ''}`}
                                     />
