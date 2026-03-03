@@ -229,27 +229,75 @@ export function UrlForms() {
 
             {status && <div className="alert alert-info mt-3">{status}</div>}
 
-            {txHash && (
-                <div className="alert alert-success mt-3">
-                    <strong>Link created!</strong><br />
-                    Short URL:{' '}
-                    <a
-                        href={`${PROJECT_URL}/#/${generatedShortId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        {`${PROJECT_URL}/#/${generatedShortId}`}
-                    </a>
-                    <br />
-                    <a
-                        href={getHashScanTxUrl(txHash)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        View on HashScan
-                    </a>
-                </div>
-            )}
+            {txHash && (() => {
+                const fullUrl = `${PROJECT_URL}/#/${generatedShortId}`;
+                const shareText = `Check out my decentralized short link: ${fullUrl}`;
+                return (
+                    <div className="alert alert-success mt-3">
+                        <strong>Link created!</strong><br />
+                        Short URL:{' '}
+                        <a
+                            href={fullUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            {fullUrl}
+                        </a>
+                        <div className="d-flex flex-wrap gap-2 mt-3">
+                            <button
+                                className="btn btn-sm btn-outline-light"
+                                onClick={async () => {
+                                    try {
+                                        await navigator.clipboard.writeText(fullUrl);
+                                        ShowToast('Copied to clipboard', 'success');
+                                    } catch {
+                                        ShowToast('Failed to copy to clipboard', 'danger');
+                                    }
+                                }}
+                                title="Copy short link"
+                            >
+                                <i className="fas fa-copy" /> Copy
+                            </button>
+                            <a
+                                className="btn btn-sm btn-outline-light"
+                                href={`https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="Share on X"
+                            >
+                                <i className="fab fa-x-twitter" /> X
+                            </a>
+                            <a
+                                className="btn btn-sm btn-outline-light"
+                                href={`https://wa.me/?text=${encodeURIComponent(shareText)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="Share on WhatsApp"
+                            >
+                                <i className="fab fa-whatsapp" /> WhatsApp
+                            </a>
+                            <a
+                                className="btn btn-sm btn-outline-light"
+                                href={`https://t.me/share/url?url=${encodeURIComponent(fullUrl)}&text=${encodeURIComponent('Check out my decentralized short link!')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="Share on Telegram"
+                            >
+                                <i className="fab fa-telegram" /> Telegram
+                            </a>
+                            <a
+                                className="btn btn-sm btn-outline-light"
+                                href={getHashScanTxUrl(txHash)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="View on HashScan"
+                            >
+                                <i className="fas fa-external-link-alt" /> HashScan
+                            </a>
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 }
