@@ -2,6 +2,15 @@ const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
 const Database = require('better-sqlite3');
+const pino = require('pino');
+
+const log = pino({
+  level: process.env.LOG_LEVEL || 'info',
+  ...(process.env.NODE_ENV !== 'production' && {
+    transport: { target: 'pino/file', options: { destination: 1 } },
+    formatters: { level: (label) => ({ level: label }) },
+  }),
+});
 const {
   Client,
   TopicMessageSubmitTransaction,
@@ -76,9 +85,9 @@ if (OPERATOR_ID && OPERATOR_KEY) {
     AccountId.fromString(OPERATOR_ID),
     PrivateKey.fromString(OPERATOR_KEY)
   );
-  console.log('Hedera client initialized for HCS');
+  log.info('Hedera client initialized for HCS');
 } else {
-  console.warn('WARNING: OPERATOR_ID/OPERATOR_KEY not set — /hcs/submit will be disabled');
+  log.warn('OPERATOR_ID/OPERATOR_KEY not set — /hcs/submit will be disabled');
 }
 
 app.use(bodyParser.json({ limit: '10kb' }));
@@ -236,7 +245,7 @@ app.post('/track', (req, res) => {
         insertVisit.run(shortId, ts, cleanReferrer, cleanUA, ip);
         res.sendStatus(200);
     } catch (err) {
-        console.error('Failed to insert visit:', err);
+        log.error({ err, shortId }, 'Failed to insert visit');
         res.sendStatus(500);
     }
 });
@@ -278,7 +287,7 @@ app.get('/stats', (req, res) => {
         }
         res.json(counts);
     } catch (err) {
-        console.error('Failed to query stats:', err);
+        log.error({ err }, 'Failed to query stats');
         res.status(500).json({ error: 'Failed to read stats' });
     }
 });
@@ -338,11 +347,11 @@ app.post('/hcs/submit', async (req, res) => {
 
     const sequenceNumber = receipt.topicSequenceNumber.toString();
 
-    console.log(`HCS message submitted: seq=${sequenceNumber}, slug=${slug}`);
+    log.info({ sequenceNumber, slug }, 'HCS message submitted');
 
     return res.json({ sequenceNumber, topicId: HCS_TOPIC_ID });
   } catch (err) {
-    console.error('HCS submit failed:', err.message);
+    log.error({ err: err.message }, 'HCS submit failed');
     if (err.message === 'HCS_TIMEOUT') {
       return res.status(504).json({ error: 'HCS submission timed out' });
     }
@@ -350,21 +359,21 @@ app.post('/hcs/submit', async (req, res) => {
   }
 });
 
-const server = app.listen(PORT, () => console.log(`Analytics server running on port ${PORT}`));
+const server = app.listen(PORT, () => log.info({ port: PORT }, 'Analytics server running'));
 
 function gracefulShutdown(signal) {
-    console.log(`${signal} received, shutting down gracefully...`);
+    log.info({ signal }, 'Shutting down gracefully');
 
     // Stop accepting new connections; let in-flight requests finish
     server.close(() => {
-        console.log('HTTP server closed, closing database...');
+        log.info('HTTP server closed, closing database');
         db.close();
         process.exit(0);
     });
 
     // Force exit after 30 s if connections refuse to drain
     setTimeout(() => {
-        console.error('Forced shutdown after 30s timeout');
+        log.fatal('Forced shutdown after 30s timeout');
         db.close();
         process.exit(1);
     }, 30000).unref();
