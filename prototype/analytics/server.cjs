@@ -334,7 +334,25 @@ app.post('/hcs/submit', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`Analytics server running on port ${PORT}`));
+const server = app.listen(PORT, () => console.log(`Analytics server running on port ${PORT}`));
 
-process.on('SIGINT', () => { db.close(); process.exit(0); });
-process.on('SIGTERM', () => { db.close(); process.exit(0); });
+function gracefulShutdown(signal) {
+    console.log(`${signal} received, shutting down gracefully...`);
+
+    // Stop accepting new connections; let in-flight requests finish
+    server.close(() => {
+        console.log('HTTP server closed, closing database...');
+        db.close();
+        process.exit(0);
+    });
+
+    // Force exit after 30 s if connections refuse to drain
+    setTimeout(() => {
+        console.error('Forced shutdown after 30s timeout');
+        db.close();
+        process.exit(1);
+    }, 30000).unref();
+}
+
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
