@@ -14,6 +14,8 @@ function QRModal({ id, qrValue, onDownload }: QRModalProps) {
         const card = cardRef.current;
         if (!card) return;
 
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
         function handleMouseMove(e: MouseEvent) {
             if (!card) return;
             const { innerWidth, innerHeight } = window;

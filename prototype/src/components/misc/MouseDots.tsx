@@ -16,8 +16,13 @@ const dots = new Float64Array(DOT_COUNT * STRIDE);
 
 const MOBILE_BREAKPOINT = 768;
 
+function prefersReducedMotion() {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
 function MouseDots() {
     const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT);
+    const [reducedMotion, setReducedMotion] = useState(prefersReducedMotion);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const mouse = useRef({ x: 0, y: 0 });
 
@@ -28,7 +33,14 @@ function MouseDots() {
     }, []);
 
     useEffect(() => {
-        if (isMobile) return;
+        const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
+        const onChange = () => setReducedMotion(mql.matches);
+        mql.addEventListener('change', onChange);
+        return () => mql.removeEventListener('change', onChange);
+    }, []);
+
+    useEffect(() => {
+        if (isMobile || reducedMotion) return;
         const canvas = canvasRef.current;
         if (!canvas) return;
 
@@ -189,9 +201,9 @@ function MouseDots() {
             window.removeEventListener('resize', handleResize);
             document.removeEventListener('visibilitychange', handleVisibility);
         };
-    }, [isMobile]);
+    }, [isMobile, reducedMotion]);
 
-    if (isMobile) return null;
+    if (isMobile || reducedMotion) return null;
 
     return (
         <canvas

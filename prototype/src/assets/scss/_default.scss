@@ -243,3 +243,36 @@ main {
 .alert {
     overflow-y: hidden;
 }
+
+// ── Reduced motion ──────────────────────────────────────────────────
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+
+    .page-transition {
+        animation: none;
+    }
+
+    html,
+    body {
+        &::before,
+        &::after {
+            filter: none;
+            opacity: 0.25;
+        }
+    }
+
+    .qr-card {
+        transition: none;
+        transform: none !important;
+    }
+
+    #custom-cursor {
+        display: none !important;
+    }
+}

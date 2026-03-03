@@ -34,6 +34,11 @@ function App() {
     const cursor = document.getElementById('custom-cursor');
     if (!cursor) return;
 
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      cursor.style.display = 'none';
+      return;
+    }
+
     let cx = 0, cy = 0;
     let rafId = 0;
 

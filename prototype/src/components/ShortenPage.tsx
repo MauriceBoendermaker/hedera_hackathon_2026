@@ -30,6 +30,8 @@ function ShortenPage() {
         const card = cardRef.current;
         if (!card) return;
 
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
         function handleDocumentMouseMove(e: MouseEvent) {
             const card = cardRef.current;
             if (!card || !card.offsetParent) return; // skip when modal is hidden
