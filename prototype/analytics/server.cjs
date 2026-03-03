@@ -83,6 +83,29 @@ if (OPERATOR_ID && OPERATOR_KEY) {
 
 app.use(bodyParser.json());
 
+// ── Trusted-proxy IP resolution ─────────────────────────────────────
+// Only trust X-Forwarded-For when the direct connection is from a known
+// reverse proxy.  Set TRUSTED_PROXIES env var to a comma-separated list
+// of proxy IPs (e.g. "127.0.0.1,::1,10.0.0.1").
+const TRUSTED_PROXIES = new Set(
+    (process.env.TRUSTED_PROXIES || '127.0.0.1,::1,::ffff:127.0.0.1')
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean)
+);
+
+function getClientIp(req) {
+    const directIp = req.socket.remoteAddress || '';
+    if (TRUSTED_PROXIES.has(directIp)) {
+        const forwarded = req.headers['x-forwarded-for'];
+        if (forwarded) {
+            // Take the left-most IP — that's the original client
+            return forwarded.split(',')[0].trim();
+        }
+    }
+    return directIp;
+}
+
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5000,http://localhost:3000')
     .split(',')
     .map(o => o.trim());
@@ -186,7 +209,7 @@ app.post('/track', (req, res) => {
         return res.sendStatus(200);
     }
 
-    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const ip = getClientIp(req);
 
     // ── Deduplicate (same IP + shortId within 10 min → skip logging) ──
     if (isDuplicateVisit(ip, shortId)) {
@@ -208,7 +231,7 @@ app.post('/track', (req, res) => {
 });
 
 app.get('/stats', (req, res) => {
-    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const ip = getClientIp(req);
 
     // 30 stats requests per IP per minute
     if (isRateLimited(`stats:${ip}`, 30, 60000)) {
