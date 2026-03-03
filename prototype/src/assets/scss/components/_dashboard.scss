@@ -96,6 +96,63 @@
     }
 }
 
+.link-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.link-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: $corner-radius;
+    padding: 14px;
+}
+
+.link-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+
+    a {
+        color: $secondary-color;
+        font-size: 16px;
+    }
+
+    code {
+        font-size: 16px;
+    }
+}
+
+.link-card-visits {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 13px;
+    white-space: nowrap;
+
+    i {
+        margin-right: 4px;
+    }
+}
+
+.link-card-url {
+    margin-bottom: 12px;
+    word-break: break-all;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.6);
+    line-height: 1.4;
+
+    a:hover {
+        color: $secondary-color !important;
+    }
+}
+
+.link-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
 @keyframes shimmer {
     0% {
         background-position: -200% 0;

@@ -256,8 +256,9 @@ function Dashboard() {
                                 <p className="text-center text-muted my-4">
                                     No links matching "{searchQuery}"
                                 </p>
-                            ) : (
-                            <div className="table-responsive">
+                            ) : (<>
+                            {/* Desktop table */}
+                            <div className="table-responsive d-none d-md-block">
                                 <table className="table table-dark align-middle">
                                     <thead>
                                         <tr>
@@ -365,7 +366,77 @@ function Dashboard() {
                                     </tbody>
                                 </table>
                             </div>
-                            )}
+
+                            {/* Mobile cards */}
+                            <div className="link-cards d-md-none">
+                                {filteredLinks.map((link) => {
+                                    const shortUrl = `${PROJECT_URL}/#/${link.shortId}`;
+                                    const txHash = localStorage.getItem(`txHash_${link.shortId}`);
+                                    return (
+                                        <div key={link.shortId} className="link-card">
+                                            <div className="link-card-header">
+                                                <a
+                                                    href={shortUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-decoration-none"
+                                                >
+                                                    <code>{link.shortId}</code>
+                                                    &nbsp;
+                                                    <i className="fas fa-external-link-alt small" />
+                                                </a>
+                                                <span className="link-card-visits">
+                                                    <i className="fas fa-chart-bar" /> {visitCounts[link.shortId] || 0}
+                                                </span>
+                                            </div>
+                                            <p className="link-card-url">
+                                                <a
+                                                    href={link.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-light text-decoration-none"
+                                                >
+                                                    {link.url}
+                                                </a>
+                                            </p>
+                                            <div className="link-card-actions">
+                                                <button
+                                                    className="btn btn-sm btn-outline-light"
+                                                    onClick={() => copyToClipboard(link.shortId)}
+                                                    aria-label="Copy short link"
+                                                >
+                                                    <i className="fas fa-copy" /> Copy
+                                                </button>
+                                                <button
+                                                    className="btn btn-sm btn-outline-light"
+                                                    aria-label="Show QR code"
+                                                    onClick={() => {
+                                                        setQrTarget(shortUrl);
+                                                        setTimeout(() => {
+                                                            const modal = new (window as any).bootstrap.Modal(document.getElementById('dashboardQrModal'));
+                                                            modal.show();
+                                                        }, 0);
+                                                    }}
+                                                >
+                                                    <i className="fas fa-qrcode" /> QR
+                                                </button>
+                                                {txHash && (
+                                                    <a
+                                                        href={getHashScanTxUrl(txHash)}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="btn btn-sm btn-outline-light"
+                                                        aria-label="View transaction on HashScan"
+                                                    >
+                                                        <i className="fas fa-external-link-alt" /> HashScan
+                                                    </a>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            </>)}
                             </>
                         )}
                     </div>
