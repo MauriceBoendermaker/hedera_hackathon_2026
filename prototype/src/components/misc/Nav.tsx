@@ -41,7 +41,7 @@ export default function Nav() {
                         <div className="row justify-content-center w-100">
                             <div className="col-12">
                                 <div className="d-flex justify-content-between align-items-center w-100">
-                                    <Link className="navbar-brand" to="/">dURL <small>//dev</small></Link>
+                                    <Link className="navbar-brand" to="/">dURL <small>{'//'}dev</small></Link>
                                     <button
                                         className="navbar-toggler"
                                         type="button"
