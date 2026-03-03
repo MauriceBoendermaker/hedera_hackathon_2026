@@ -153,13 +153,31 @@ export function UrlForms() {
                 setStatus('Confirmed in block ' + receipt.blockNumber);
             }
         } catch (err: any) {
-            if (err.code === 4001) {
-                setStatus('Transaction cancelled by user.');
-                ShowToast('Transaction cancelled', 'danger');
+            let message: string;
+
+            if (err.code === 4001 || err.code === 'ACTION_REJECTED') {
+                message = 'Transaction cancelled by user.';
+            } else if (err.code === -32603) {
+                message = 'Internal RPC error. The network may be congested — please try again.';
+            } else if (err.code === -32002) {
+                message = 'A wallet request is already pending. Check your MetaMask.';
+            } else if (err.code === 'CALL_EXCEPTION' && err.reason) {
+                message = `Contract error: ${err.reason}`;
+            } else if (err.reason) {
+                message = `Transaction failed: ${err.reason}`;
+            } else if (err.message?.includes('timeout') || err.code === 'TIMEOUT') {
+                message = 'Transaction timed out. Check your wallet for pending transactions.';
+            } else if (err.message?.includes('insufficient funds')) {
+                message = 'Insufficient funds to cover the transaction cost and gas.';
+            } else if (err.message?.includes('nonce')) {
+                message = 'Nonce conflict. Reset your wallet activity or wait for pending transactions.';
             } else {
-                setStatus('');
-                ShowToast('Transaction failed: ' + (err.message || 'Unknown error'), 'danger');
+                message = 'Transaction failed: ' + (err.message || 'Unknown error');
             }
+
+            setStatus(message);
+            ShowToast(message, 'danger');
+            console.error('Transaction error:', err);
         } finally {
             setSubmitting(false);
         }
