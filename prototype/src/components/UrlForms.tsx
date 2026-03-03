@@ -22,7 +22,22 @@ export function UrlForms() {
 
     function isValidUrl(string: string) {
         try {
-            new URL(string);
+            const url = new URL(string);
+            if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+                return false;
+            }
+            const hostname = url.hostname.toLowerCase();
+            if (
+                hostname === 'localhost' ||
+                hostname === '127.0.0.1' ||
+                hostname === '0.0.0.0' ||
+                hostname === '[::1]' ||
+                hostname.startsWith('10.') ||
+                hostname.startsWith('192.168.') ||
+                /^172\.(1[6-9]|2\d|3[01])\./.test(hostname)
+            ) {
+                return false;
+            }
             return true;
         } catch {
             return false;
