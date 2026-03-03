@@ -262,6 +262,16 @@ app.post('/hcs/submit', async (req, res) => {
     return res.status(400).json({ error: 'Missing required fields: slug, urlHash, sender' });
   }
 
+  if (typeof slug !== 'string' || !VALID_SHORT_ID.test(slug)) {
+    return res.status(400).json({ error: 'Invalid slug format. Must be 1-32 alphanumeric, hyphen, or underscore characters.' });
+  }
+  if (typeof urlHash !== 'string' || !/^[a-fA-F0-9]{64}$/.test(urlHash)) {
+    return res.status(400).json({ error: 'Invalid urlHash. Must be a 64-character hex string.' });
+  }
+  if (typeof sender !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(sender)) {
+    return res.status(400).json({ error: 'Invalid sender. Must be a valid Ethereum address.' });
+  }
+
   const payload = JSON.stringify({
     slug,
     urlHash,
