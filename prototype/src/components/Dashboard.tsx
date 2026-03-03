@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ethers } from 'ethers';
 import abi from '../abi_hedera.json';
 import { ShowToast } from './utils/ShowToast';
@@ -17,24 +17,29 @@ function Dashboard() {
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState<SortOption>('newest');
     const [retryCount, setRetryCount] = useState(0);
+    const slugsRef = useRef<string[]>([]);
 
-    const loadLinks = useCallback(async (signal: AbortSignal) => {
-        if (!window.ethereum) return;
-
+    async function fetchStats(slugs: string[], signal: AbortSignal) {
+        if (slugs.length === 0) return;
         try {
-            const res = await fetch(`${ANALYTICS_URL}/stats`, { signal });
+            const params = new URLSearchParams({ slugs: slugs.join(',') });
+            const res = await fetch(`${ANALYTICS_URL}/stats?${params}`, { signal });
             if (res.status === 429) {
                 ShowToast('Rate limit reached — stats requests are temporarily throttled.', 'danger');
                 return;
             }
             if (!res.ok) throw new Error(`Stats request failed (${res.status})`);
             const stats = await res.json();
-            setVisitCounts(stats);
+            if (!signal.aborted) setVisitCounts(stats);
         } catch (e) {
             if (!(e instanceof DOMException)) {
                 ShowToast('Could not load visit stats. Analytics server may be down.', 'danger');
             }
         }
+    }
+
+    const loadLinks = useCallback(async (signal: AbortSignal) => {
+        if (!window.ethereum) return;
 
         try {
             if (typeof window === 'undefined' || !window.ethereum) {
@@ -78,7 +83,9 @@ function Dashboard() {
 
             if (!signal.aborted) {
                 setLinks(formatted);
+                slugsRef.current = shortIds;
                 setError('');
+                await fetchStats(shortIds, signal);
             }
         } catch (err: any) {
             if (!signal.aborted) {
@@ -98,8 +105,11 @@ function Dashboard() {
         let pollFailures = 0;
         const statsInterval = setInterval(async () => {
             if (abortController.signal.aborted) return;
+            const currentSlugs = slugsRef.current;
+            if (currentSlugs.length === 0) return;
             try {
-                const res = await fetch(`${ANALYTICS_URL}/stats`, { signal: abortController.signal });
+                const params = new URLSearchParams({ slugs: currentSlugs.join(',') });
+                const res = await fetch(`${ANALYTICS_URL}/stats?${params}`, { signal: abortController.signal });
                 if (res.status === 429) {
                     ShowToast('Rate limit reached — stats requests are temporarily throttled.', 'danger');
                     return;

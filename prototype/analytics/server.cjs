@@ -230,6 +230,8 @@ app.post('/track', (req, res) => {
     }
 });
 
+const MAX_STATS_SLUGS = 100;
+
 app.get('/stats', (req, res) => {
     const ip = getClientIp(req);
 
@@ -238,8 +240,27 @@ app.get('/stats', (req, res) => {
         return res.status(429).json({ error: 'Too many requests. Please wait before refreshing stats.' });
     }
 
+    // Require a "slugs" query param to scope results — prevents full enumeration
+    const slugsParam = req.query.slugs;
+    if (!slugsParam || typeof slugsParam !== 'string') {
+        return res.status(400).json({ error: 'Missing required "slugs" query parameter.' });
+    }
+
+    const requested = slugsParam.split(',')
+        .map(s => s.trim())
+        .filter(s => VALID_SHORT_ID.test(s))
+        .slice(0, MAX_STATS_SLUGS);
+
+    if (requested.length === 0) {
+        return res.json({});
+    }
+
     try {
-        const rows = countByShortId.all();
+        const placeholders = requested.map(() => '?').join(',');
+        const stmt = db.prepare(
+            `SELECT shortId, COUNT(*) AS count FROM visits WHERE shortId IN (${placeholders}) GROUP BY shortId`
+        );
+        const rows = stmt.all(...requested);
         const counts = {};
         for (const row of rows) {
             counts[row.shortId] = row.count;
@@ -247,7 +268,7 @@ app.get('/stats', (req, res) => {
         res.json(counts);
     } catch (err) {
         console.error('Failed to query stats:', err);
-        res.status(500).send('Failed to read stats');
+        res.status(500).json({ error: 'Failed to read stats' });
     }
 });
 
