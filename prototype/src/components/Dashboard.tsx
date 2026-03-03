@@ -111,10 +111,14 @@ function Dashboard() {
         };
     }, []);
 
-    function copyToClipboard(shortId: string) {
+    async function copyToClipboard(shortId: string) {
         const fullUrl = `${PROJECT_URL}/#/${shortId}`;
-        navigator.clipboard.writeText(fullUrl);
-        ShowToast('Copied to clipboard', 'success');
+        try {
+            await navigator.clipboard.writeText(fullUrl);
+            ShowToast('Copied to clipboard', 'success');
+        } catch {
+            ShowToast('Failed to copy to clipboard', 'danger');
+        }
     }
 
     function downloadDashboardQR() {
