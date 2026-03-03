@@ -16,6 +16,8 @@ export function UrlForms() {
     const [shortUrlExistsError, setShortUrlExistsError] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
+    const hasWallet = typeof window !== 'undefined' && !!window.ethereum;
+
     function isValidUrl(string: string) {
         try {
             new URL(string);
@@ -148,6 +150,28 @@ export function UrlForms() {
 
     return (
         <div>
+            {!hasWallet && (
+                <div className="metamask-banner mb-3">
+                    <div className="d-flex align-items-center gap-3">
+                        <i className="fab fa-ethereum metamask-banner-icon" />
+                        <div>
+                            <strong>Wallet required</strong>
+                            <p className="mb-0 small">
+                                Install MetaMask to create short links on Hedera.
+                            </p>
+                        </div>
+                        <a
+                            href="https://metamask.io/download/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-sm btn-outline-light ms-auto text-nowrap"
+                        >
+                            Install MetaMask
+                        </a>
+                    </div>
+                </div>
+            )}
+
             <ul className="nav nav-tabs">
                 <li className="nav-item">
                     <button
@@ -215,7 +239,7 @@ export function UrlForms() {
                 </div>
 
                 <div className="button-group mt-3">
-                    <button type="submit" className="btn btn-primary w-100" disabled={submitting}>
+                    <button type="submit" className="btn btn-primary w-100" disabled={submitting || !hasWallet}>
                         {submitting ? 'Submitting...' : 'Submit to Blockchain'}
                     </button>
                 </div>

@@ -6,3 +6,17 @@
     display: flex;
     align-items: center;
 }
+
+.metamask-banner {
+    background: rgba(255, 160, 50, 0.1);
+    border: 1px solid rgba(255, 160, 50, 0.3);
+    border-radius: $corner-radius;
+    padding: 14px 18px;
+    color: $white;
+}
+
+.metamask-banner-icon {
+    font-size: 28px;
+    color: #f6851b;
+    flex-shrink: 0;
+}
