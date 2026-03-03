@@ -18,22 +18,11 @@ button {
 
 .button-group {
     display: flex;
-    gap: 16px;
+    flex-direction: column;
+    gap: 0;
 
     button {
         display: inline-block;
-
-        &:first-of-type {
-            flex-grow: 1;
-        }
-
-        &:last-of-type {
-            white-space: nowrap;
-        }
-
-        &:not(:first-child) {
-            margin-left: 15px;
-        }
     }
 }
 

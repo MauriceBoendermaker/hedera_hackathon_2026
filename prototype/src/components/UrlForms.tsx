@@ -274,8 +274,8 @@ export function UrlForms() {
                         const isOverLimit = slugLength > MAX_SLUG_LENGTH;
                         return (
                             <>
+                                <label htmlFor="custom-slug" className="visually-hidden">Custom slug</label>
                                 <div className="input-group mt-3">
-                                    <label htmlFor="custom-slug" className="visually-hidden">Custom slug</label>
                                     <span className="input-group-text" id="custom-slug-prefix">durl.dev/</span>
                                     <input
                                         id="custom-slug"
@@ -333,7 +333,7 @@ export function UrlForms() {
                 </div>
 
                 <div className="button-group mt-3">
-                    <div className="price-disclaimer small mb-2" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                    <div className="price-disclaimer small mb-3" style={{ color: 'rgba(255,255,255,0.7)' }}>
                         <i className="fas fa-info-circle me-1" />
                         {isCustomMode
                             ? 'Cost: 1 HBAR + gas fee'
