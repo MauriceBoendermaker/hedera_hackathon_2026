@@ -4,6 +4,7 @@ import abi from '../abi_hedera.json';
 import { ShowToast } from './utils/ShowToast';
 import QRModal from './utils/QRModal';
 import { getHashScanTxUrl, CONTRACT_ADDRESS, PROJECT_URL, ANALYTICS_URL } from 'utils/HederaConfig';
+import { safeGetItem } from 'utils/safeStorage';
 
 type SortOption = 'newest' | 'oldest' | 'most-visited' | 'least-visited';
 
@@ -361,7 +362,7 @@ function Dashboard() {
                                                     </td>
                                                     <td className="text-center">
                                                         {(() => {
-                                                            const txHash = localStorage.getItem(`txHash_${link.shortId}`);
+                                                            const txHash = safeGetItem(`txHash_${link.shortId}`);
                                                             if (txHash) {
                                                                 return (
                                                                     <div className="d-flex justify-content-center gap-2">
@@ -403,7 +404,7 @@ function Dashboard() {
                             <div className="link-cards d-md-none">
                                 {filteredLinks.map((link) => {
                                     const shortUrl = `${PROJECT_URL}/#/${link.shortId}`;
-                                    const txHash = localStorage.getItem(`txHash_${link.shortId}`);
+                                    const txHash = safeGetItem(`txHash_${link.shortId}`);
                                     return (
                                         <div key={link.shortId} className="link-card">
                                             <div className="link-card-header">

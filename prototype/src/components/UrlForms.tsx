@@ -4,6 +4,7 @@ import abi from '../abi_hedera.json';
 import { ShowToast } from './utils/ShowToast';
 import { switchToHedera } from 'utils/NetworkSwitcher';
 import { getHashScanTxUrl, CONTRACT_ADDRESS, PROJECT_URL } from 'utils/HederaConfig';
+import { safeSetItem } from 'utils/safeStorage';
 
 export function UrlForms() {
     const [originalUrl, setOriginalUrl] = useState('');
@@ -132,7 +133,7 @@ export function UrlForms() {
                 const shortId = await parseShortUrlCreated(receipt, provider);
 
                 if (shortId) {
-                    localStorage.setItem(`txHash_${shortId}`, receipt.hash);
+                    safeSetItem(`txHash_${shortId}`, receipt.hash);
                 }
 
                 setTxHash(receipt.hash);
@@ -154,7 +155,7 @@ export function UrlForms() {
                 const shortId = await parseShortUrlCreated(receipt, provider);
 
                 if (shortId) {
-                    localStorage.setItem(`txHash_${shortId}`, receipt.hash);
+                    safeSetItem(`txHash_${shortId}`, receipt.hash);
                 }
 
                 setTxHash(receipt.hash);
