@@ -40,10 +40,10 @@ Requirements for hackathon submission. Each maps to roadmap phases.
 
 ### HCS Audit Trail
 
-- [ ] **HCS-01**: HCS topic created on Hedera testnet for URL creation audit log
-- [ ] **HCS-02**: HCS message submitted on every URL creation (random and custom)
-- [ ] **HCS-03**: HCS message contains compact JSON: slug, URL hash, sender address, timestamp
-- [ ] **HCS-04**: HCS message stays within 1024-byte limit
+- [x] **HCS-01**: HCS topic created on Hedera testnet for URL creation audit log
+- [x] **HCS-02**: HCS message submitted on every URL creation (random and custom)
+- [x] **HCS-03**: HCS message contains compact JSON: slug, URL hash, sender address, timestamp
+- [x] **HCS-04**: HCS message stays within 1024-byte limit
 - [ ] **HCS-05**: HCS submission is fire-and-forget (failure does not block URL creation)
 
 ### Dual Proof UI
@@ -114,10 +114,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PAY-02 | Phase 1 | Complete |
 | PAY-03 | Phase 1 | Complete |
 | PAY-04 | Phase 1 | Complete |
-| HCS-01 | Phase 2 | Pending |
-| HCS-02 | Phase 2 | Pending |
-| HCS-03 | Phase 2 | Pending |
-| HCS-04 | Phase 2 | Pending |
+| HCS-01 | Phase 2 | Complete |
+| HCS-02 | Phase 2 | Complete |
+| HCS-03 | Phase 2 | Complete |
+| HCS-04 | Phase 2 | Complete |
 | HCS-05 | Phase 2 | Pending |
 | PROOF-01 | Phase 2 | Pending |
 | PROOF-02 | Phase 2 | Pending |

@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-03T13:39:10.255Z"
+last_updated: "2026-03-03T14:33:46.269Z"
 progress:
-  total_phases: 1
+  total_phases: 2
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 6
+  completed_plans: 4
 ---
 
 ---
@@ -31,16 +31,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-02)
 
 **Core value:** Immutable, decentralized URL shortening — once a link is created on-chain, it cannot be censored, modified, or taken down by any central authority.
-**Current focus:** Phase 1 — Hedera EVM Migration
+**Current focus:** Phase 2 — HCS Audit Trail, Dual Proof, UI
 
 ## Current Position
 
-Phase: 1 of 3 (Hedera EVM Migration)
-Plan: 3 of 5 in current phase
-Status: In progress
-Last activity: 2026-03-03 — Completed Plan 02 (DURLShortener.sol deployed to Hedera testnet, UrlForms.tsx rewritten for HBAR payment)
+Phase: 2 of 3 (HCS Audit Trail, Dual Proof, UI)
+Plan: 1 of 3 in current phase (paused at checkpoint:human-action)
+Status: In progress — awaiting user Hedera account + topic creation (Task 2 of Plan 01)
+Last activity: 2026-03-03 — Completed Plan 01 Task 1 (@hashgraph/sdk installed, /hcs/submit endpoint, create-topic.cjs, getHashScanTopicUrl helper)
 
-Progress: [###░░░░░░░] 21%
+Progress: [####░░░░░░] 33%
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Progress: [###░░░░░░░] 21%
 
 *Updated after each plan completion*
 | Phase 01-hedera-evm-migration P02 | 15 | 3 tasks | 4 files |
+| Phase 02-hcs-audit-trail-dual-proof-ui P01 | 4 | 1 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -81,6 +82,9 @@ Recent decisions affecting current work:
 - [UI]: Built on Hedera badge placed in both Nav (brand area) and Footer for maximum visibility
 - [Phase 01-hedera-evm-migration]: Contract deployed to Hedera testnet at 0x51A7C192eCCc7Cd93FBE56F472627998E231D9CC
 - [Phase 01-hedera-evm-migration]: parseShortUrlCreated() uses provider.getLogs() fallback — Hedera relay may return empty receipt.logs
+- [Phase 02-hcs-audit-trail-dual-proof-ui]: @hashgraph/sdk imported only in Node.js backend (server.cjs, scripts/) — zero src/ imports, React build succeeds
+- [Phase 02-hcs-audit-trail-dual-proof-ui]: OPERATOR_ID/OPERATOR_KEY are server-side only env vars (no REACT_APP_ prefix) — private key never exposed to browser
+- [Phase 02-hcs-audit-trail-dual-proof-ui]: REACT_APP_ANALYTICS_URL env var added; hardcoded localhost:5001 replaced in Dashboard.tsx and RedirectPage.tsx
 
 ### Pending Todos
 
@@ -88,7 +92,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 2]: HCS topic must be created before any HCS code is written — requires funded Hedera account; do this on Day 1 of Phase 2
+- [Phase 2 - ACTIVE]: HCS topic must be created — user must go to portal.hedera.com, create testnet account, run `node scripts/create-topic.cjs`, set OPERATOR_ID/OPERATOR_KEY/HCS_TOPIC_ID in .env
 - [Phase 2 - RESOLVED]: ethers.parseEther("1") == 1 HBAR confirmed — contract deployed and ABI updated with payable stateMutability
 - [Phase 2]: @hashgraph/sdk browser-side compatibility (TopicMessageSubmitTransaction) needs validation before building HederaHCSService.ts
 - [Phase 2]: Mirror Node testnet rate limits are unverified — HCS feed polling may need backoff logic
@@ -96,5 +100,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed 01-02-PLAN.md — DURLShortener.sol deployed to Hedera testnet at 0x51A7C192eCCc7Cd93FBE56F472627998E231D9CC, UrlForms.tsx rewritten for HBAR payment with inline confirmation.
+Stopped at: Checkpoint 02-01 Task 2 — awaiting user Hedera testnet account creation and HCS topic creation via portal.hedera.com + node scripts/create-topic.cjs
 Resume file: None

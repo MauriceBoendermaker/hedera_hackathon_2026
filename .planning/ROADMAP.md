@@ -71,5 +71,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Hedera EVM Migration | 3/3 | Complete   | 2026-03-03 |
-| 2. HCS Audit Trail + Dual Proof UI | 0/3 | Not started | - |
+| 2. HCS Audit Trail + Dual Proof UI | 1/3 | In Progress|  |
 | 3. Docs and Demo Polish | 0/TBD | Not started | - |
