@@ -44,11 +44,12 @@ Plans:
   2. A "Verify on HashScan" button links to the HCS topic on hashscan.io/testnet and the message is visible there
   3. HCS submission failure does not block URL creation — the EVM confirmation shows success regardless of HCS outcome
   4. The dashboard shows decoded HCS audit entries (slug, URL hash, sender, timestamp) fetched from Mirror Node
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
+- [ ] 02-01-PLAN.md — HCS backend setup: @hashgraph/sdk, topic creation script, /hcs/submit endpoint (Wave 1)
+- [ ] 02-02-PLAN.md — UrlForms fire-and-forget HCS submission + dual proof confirmation UI (Wave 2)
+- [ ] 02-03-PLAN.md — Dashboard HCS Audit Log via Mirror Node REST API (Wave 2)
 
 ### Phase 3: Docs and Demo Polish
 **Goal**: Complete hackathon submission package — design decisions documented and demo hardened against testnet failures
@@ -70,5 +71,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Hedera EVM Migration | 3/3 | Complete   | 2026-03-03 |
-| 2. HCS Audit Trail + Dual Proof UI | 0/TBD | Not started | - |
+| 2. HCS Audit Trail + Dual Proof UI | 0/3 | Not started | - |
 | 3. Docs and Demo Polish | 0/TBD | Not started | - |
