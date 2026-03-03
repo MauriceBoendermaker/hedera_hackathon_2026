@@ -1,3 +1,5 @@
 .how-it-works-container {
-    
+    ul > li + li {
+        margin-top: 1rem;
+    }
 }
