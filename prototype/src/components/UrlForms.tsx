@@ -18,6 +18,7 @@ export function UrlForms() {
     const [submitting, setSubmitting] = useState(false);
     const [checkingSlug, setCheckingSlug] = useState(false);
     const [slugHint, setSlugHint] = useState('');
+    const [copied, setCopied] = useState(false);
 
     const hasWallet = typeof window !== 'undefined' && !!window.ethereum;
     const MAX_SLUG_LENGTH = 32;
@@ -373,10 +374,13 @@ export function UrlForms() {
                             </a>
                             <button
                                 className="link-created-card__copy-btn"
+                                style={copied ? { background: '#198754', borderColor: '#198754', color: '#fff' } : undefined}
                                 onClick={async () => {
                                     try {
                                         await navigator.clipboard.writeText(fullUrl);
                                         ShowToast('Copied to clipboard', 'success');
+                                        setCopied(true);
+                                        setTimeout(() => setCopied(false), 1500);
                                     } catch {
                                         ShowToast('Failed to copy to clipboard', 'danger');
                                     }
@@ -384,7 +388,7 @@ export function UrlForms() {
                                 title="Copy short link"
                                 aria-label="Copy short link"
                             >
-                                <i className="fas fa-copy" />
+                                <i className={copied ? 'fas fa-check' : 'fas fa-copy'} />
                             </button>
                         </div>
 
@@ -440,6 +444,7 @@ export function UrlForms() {
                                 setTxHash('');
                                 setGeneratedShortId('');
                                 setStatus('');
+                                setCopied(false);
                             }}
                         >
                             Create another link

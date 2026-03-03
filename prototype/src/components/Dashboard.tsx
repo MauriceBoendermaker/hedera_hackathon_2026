@@ -21,6 +21,7 @@ function Dashboard() {
     const [page, setPage] = useState(1);
     const [retryCount, setRetryCount] = useState(0);
     const slugsRef = useRef<string[]>([]);
+    const [copiedIds, setCopiedIds] = useState<Set<string>>(new Set());
 
     async function fetchStats(slugs: string[], signal: AbortSignal) {
         if (slugs.length === 0) return;
@@ -151,6 +152,14 @@ function Dashboard() {
         try {
             await navigator.clipboard.writeText(fullUrl);
             ShowToast('Copied to clipboard', 'success');
+            setCopiedIds(prev => new Set(prev).add(shortId));
+            setTimeout(() => {
+                setCopiedIds(prev => {
+                    const next = new Set(prev);
+                    next.delete(shortId);
+                    return next;
+                });
+            }, 1500);
         } catch {
             ShowToast('Failed to copy to clipboard', 'danger');
         }
@@ -372,12 +381,12 @@ function Dashboard() {
                                                     <td className="text-center">
                                                         <div className="d-flex justify-content-center gap-2 flex-wrap">
                                                             <button
-                                                                className="btn btn-sm btn-outline-light"
+                                                                className={`btn btn-sm ${copiedIds.has(link.shortId) ? 'btn-success' : 'btn-outline-light'}`}
                                                                 onClick={() => copyToClipboard(link.shortId)}
                                                                 title="Copy short link"
                                                                 aria-label="Copy short link"
                                                             >
-                                                                <i className="fas fa-copy" />
+                                                                <i className={copiedIds.has(link.shortId) ? 'fas fa-check' : 'fas fa-copy'} />
                                                             </button>
                                                             <button
                                                                 className="btn btn-sm btn-outline-light"
@@ -472,11 +481,11 @@ function Dashboard() {
                                             </p>
                                             <div className="link-card-actions">
                                                 <button
-                                                    className="btn btn-sm btn-outline-light"
+                                                    className={`btn btn-sm ${copiedIds.has(link.shortId) ? 'btn-success' : 'btn-outline-light'}`}
                                                     onClick={() => copyToClipboard(link.shortId)}
                                                     aria-label="Copy short link"
                                                 >
-                                                    <i className="fas fa-copy" /> Copy
+                                                    <i className={copiedIds.has(link.shortId) ? 'fas fa-check' : 'fas fa-copy'} /> {copiedIds.has(link.shortId) ? 'Copied' : 'Copy'}
                                                 </button>
                                                 <button
                                                     className="btn btn-sm btn-outline-light"
