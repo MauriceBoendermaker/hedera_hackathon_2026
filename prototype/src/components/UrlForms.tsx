@@ -20,6 +20,15 @@ export function UrlForms() {
     const hasWallet = typeof window !== 'undefined' && !!window.ethereum;
     const MAX_SLUG_LENGTH = 32;
 
+    function resetForm() {
+        setOriginalUrl('');
+        setShortUrl('');
+        setSlugHint('');
+        setUrlInvalid(false);
+        setShortUrlExistsError(false);
+        setStatus('');
+    }
+
     function isValidUrl(string: string) {
         try {
             const url = new URL(string);
@@ -128,6 +137,7 @@ export function UrlForms() {
 
                 setTxHash(receipt.hash);
                 setGeneratedShortId(shortId ?? customId);
+                resetForm();
                 ShowToast('Custom link created! View on HashScan', 'success');
                 setStatus('Confirmed in block ' + receipt.blockNumber);
             } else {
@@ -149,6 +159,7 @@ export function UrlForms() {
 
                 setTxHash(receipt.hash);
                 setGeneratedShortId(shortId ?? '');
+                resetForm();
                 ShowToast('Short link created! View on HashScan', 'success');
                 setStatus('Confirmed in block ' + receipt.blockNumber);
             }
@@ -411,6 +422,18 @@ export function UrlForms() {
                                 {status}
                             </div>
                         )}
+
+                        <button
+                            type="button"
+                            className="btn btn-sm btn-outline-light mt-3 w-100"
+                            onClick={() => {
+                                setTxHash('');
+                                setGeneratedShortId('');
+                                setStatus('');
+                            }}
+                        >
+                            Create another link
+                        </button>
                     </div>
                 );
             })()}
