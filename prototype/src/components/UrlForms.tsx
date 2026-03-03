@@ -207,26 +207,34 @@ export function UrlForms() {
                 </div>
             )}
 
-            <ul className="nav nav-tabs">
-                <li className="nav-item">
+            <div className="nav nav-tabs" role="tablist">
+                <div className="nav-item">
                     <button
                         className={`nav-link ${isCustomMode ? 'active' : ''}`}
                         onClick={() => setIsCustomMode(true)}
+                        role="tab"
+                        aria-selected={isCustomMode}
+                        aria-controls="tab-custom"
+                        id="tab-btn-custom"
                     >
                         Custom URL
                     </button>
-                </li>
-                <li className="nav-item">
+                </div>
+                <div className="nav-item">
                     <button
                         className={`nav-link ${!isCustomMode ? 'active' : ''}`}
                         onClick={() => setIsCustomMode(false)}
+                        role="tab"
+                        aria-selected={!isCustomMode}
+                        aria-controls="tab-random"
+                        id="tab-btn-random"
                     >
                         Random
                     </button>
-                </li>
-            </ul>
+                </div>
+            </div>
 
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} role="tabpanel" id={isCustomMode ? 'tab-custom' : 'tab-random'} aria-labelledby={isCustomMode ? 'tab-btn-custom' : 'tab-btn-random'}>
                 <div className="mb-3">
                     <input
                         type="text"
