@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ethers } from 'ethers';
 import abi from '../abi_hedera.json';
 import { ShowToast } from './utils/ShowToast';
@@ -22,6 +22,45 @@ export function UrlForms() {
 
     const hasWallet = typeof window !== 'undefined' && !!window.ethereum;
     const MAX_SLUG_LENGTH = 32;
+    const slugCheckTimer = useRef<ReturnType<typeof setTimeout>>(null);
+    const slugCheckAbort = useRef<AbortController>(null);
+
+    useEffect(() => {
+        if (slugCheckTimer.current) clearTimeout(slugCheckTimer.current);
+        if (slugCheckAbort.current) slugCheckAbort.current.abort();
+
+        const slug = shortUrl.replace(/^\//, '');
+        if (!slug || !isCustomMode || !hasWallet) {
+            setCheckingSlug(false);
+            setShortUrlExistsError(false);
+            return;
+        }
+
+        const abort = new AbortController();
+        slugCheckAbort.current = abort;
+
+        slugCheckTimer.current = setTimeout(async () => {
+            setCheckingSlug(true);
+            try {
+                const provider = new ethers.BrowserProvider(window.ethereum);
+                const contract = new ethers.Contract(CONTRACT_ADDRESS, abi, provider);
+                const exists: boolean = await contract.shortIdExists(slug);
+                if (!abort.signal.aborted) {
+                    setShortUrlExistsError(exists);
+                    if (exists) setSlugHint('');
+                }
+            } catch {
+                // Silently ignore — availability will be re-checked on submit
+            } finally {
+                if (!abort.signal.aborted) setCheckingSlug(false);
+            }
+        }, 300);
+
+        return () => {
+            clearTimeout(slugCheckTimer.current!);
+            abort.abort();
+        };
+    }, [shortUrl, isCustomMode]);
 
     function resetForm() {
         setOriginalUrl('');
@@ -114,6 +153,12 @@ export function UrlForms() {
                     return;
                 }
 
+                if (shortUrlExistsError) {
+                    ShowToast('That short URL is already taken', 'danger');
+                    return;
+                }
+
+                // Final availability check at submit time as a safety net
                 setCheckingSlug(true);
                 let exists: boolean;
                 try {
