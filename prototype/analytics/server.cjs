@@ -1,7 +1,7 @@
 const express = require('express');
-const fs = require('fs');
 const path = require('path');
 const bodyParser = require('body-parser');
+const Database = require('better-sqlite3');
 const {
   Client,
   TopicMessageSubmitTransaction,
@@ -11,7 +11,31 @@ const {
 
 const app = express();
 const PORT = process.env.PORT || 5001;
-const LOG_FILE = path.join(__dirname, 'logs.json');
+
+// ── SQLite setup ─────────────────────────────────────────────────────
+const DB_PATH = path.join(__dirname, 'analytics.db');
+const db = new Database(DB_PATH);
+db.pragma('journal_mode = WAL');
+db.pragma('busy_timeout = 5000');
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS visits (
+    id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    shortId   TEXT    NOT NULL,
+    timestamp INTEGER NOT NULL,
+    referrer  TEXT    NOT NULL DEFAULT '',
+    userAgent TEXT    NOT NULL DEFAULT '',
+    ip        TEXT    NOT NULL DEFAULT ''
+  )
+`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_visits_shortId ON visits (shortId)`);
+
+const insertVisit = db.prepare(
+  'INSERT INTO visits (shortId, timestamp, referrer, userAgent, ip) VALUES (?, ?, ?, ?, ?)'
+);
+const countByShortId = db.prepare(
+  'SELECT shortId, COUNT(*) AS count FROM visits GROUP BY shortId'
+);
 
 // ── Rate-limiting helpers ──────────────────────────────────────────────
 const rateBuckets = {};          // key → { count, resetAt }
@@ -76,27 +100,21 @@ app.use((req, res, next) => {
 
 // ── Health check ───────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
-    fs.access(LOG_FILE, fs.constants.R_OK | fs.constants.W_OK, (err) => {
-        let logStatus = 'readable';
-        let healthy = true;
+    let dbStatus = 'ok';
+    let healthy = true;
 
-        if (err) {
-            if (err.code === 'ENOENT') {
-                // File doesn't exist yet — normal before first /track call
-                logStatus = 'not_created';
-            } else {
-                // File exists but permissions are broken
-                logStatus = 'inaccessible';
-                healthy = false;
-            }
-        }
+    try {
+        db.prepare('SELECT 1').get();
+    } catch {
+        dbStatus = 'inaccessible';
+        healthy = false;
+    }
 
-        res.status(healthy ? 200 : 503).json({
-            status: healthy ? 'ok' : 'degraded',
-            uptime: Math.floor(process.uptime()),
-            log: logStatus,
-            hcs: hederaClient ? 'configured' : 'disabled',
-        });
+    res.status(healthy ? 200 : 503).json({
+        status: healthy ? 'ok' : 'degraded',
+        uptime: Math.floor(process.uptime()),
+        db: dbStatus,
+        hcs: hederaClient ? 'configured' : 'disabled',
     });
 });
 
@@ -180,32 +198,13 @@ app.post('/track', (req, res) => {
         return res.status(429).json({ error: 'Rate limit exceeded. Try again in a minute.' });
     }
 
-    const entry = {
-        shortId,
-        timestamp: ts,
-        referrer: cleanReferrer,
-        userAgent: cleanUA,
-        ip
-    };
-
-    fs.readFile(LOG_FILE, 'utf8', (err, data) => {
-        let logs = [];
-        if (!err && data) {
-            try {
-                logs = JSON.parse(data);
-            } catch { }
-        }
-
-        logs.push(entry);
-
-        fs.writeFile(LOG_FILE, JSON.stringify(logs, null, 2), (err) => {
-            if (err) {
-                console.error('Failed to write to log:', err);
-                return res.sendStatus(500);
-            }
-            res.sendStatus(200);
-        });
-    });
+    try {
+        insertVisit.run(shortId, ts, cleanReferrer, cleanUA, ip);
+        res.sendStatus(200);
+    } catch (err) {
+        console.error('Failed to insert visit:', err);
+        res.sendStatus(500);
+    }
 });
 
 app.get('/stats', (req, res) => {
@@ -216,23 +215,17 @@ app.get('/stats', (req, res) => {
         return res.status(429).json({ error: 'Too many requests. Please wait before refreshing stats.' });
     }
 
-    fs.readFile(LOG_FILE, 'utf8', (err, data) => {
-        if (err) return res.status(500).send('Failed to read logs');
-
-        let logs = [];
-        try {
-            logs = JSON.parse(data);
-        } catch (e) {
-            return res.status(500).send('Invalid log data');
+    try {
+        const rows = countByShortId.all();
+        const counts = {};
+        for (const row of rows) {
+            counts[row.shortId] = row.count;
         }
-
-        const counts = logs.reduce((acc, entry) => {
-            acc[entry.shortId] = (acc[entry.shortId] || 0) + 1;
-            return acc;
-        }, {});
-
         res.json(counts);
-    });
+    } catch (err) {
+        console.error('Failed to query stats:', err);
+        res.status(500).send('Failed to read stats');
+    }
 });
 
 app.post('/hcs/submit', async (req, res) => {
@@ -277,3 +270,6 @@ app.post('/hcs/submit', async (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Analytics server running on port ${PORT}`));
+
+process.on('SIGINT', () => { db.close(); process.exit(0); });
+process.on('SIGTERM', () => { db.close(); process.exit(0); });
