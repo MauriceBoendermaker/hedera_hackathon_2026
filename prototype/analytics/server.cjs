@@ -48,13 +48,24 @@ const countByShortId = db.prepare(
 );
 
 // ── Rate-limiting helpers ──────────────────────────────────────────────
-const rateBuckets = {};          // key → { count, resetAt }
+const rateBuckets = new Map();   // key → { count, resetAt }
 const CLEANUP_INTERVAL = 60000;  // purge stale entries every 60 s
+const MAX_MAP_ENTRIES = 100_000; // hard cap to prevent unbounded memory growth
+
+/** Evict oldest entries when a Map exceeds MAX_MAP_ENTRIES. */
+function enforceCap(map) {
+  if (map.size <= MAX_MAP_ENTRIES) return;
+  const excess = map.size - MAX_MAP_ENTRIES;
+  const iter = map.keys();
+  for (let i = 0; i < excess; i++) {
+    map.delete(iter.next().value);
+  }
+}
 
 setInterval(() => {
   const now = Date.now();
-  for (const key in rateBuckets) {
-    if (rateBuckets[key].resetAt <= now) delete rateBuckets[key];
+  for (const [key, bucket] of rateBuckets) {
+    if (bucket.resetAt <= now) rateBuckets.delete(key);
   }
 }, CLEANUP_INTERVAL);
 
@@ -66,9 +77,10 @@ setInterval(() => {
  */
 function isRateLimited(key, max, windowMs) {
   const now = Date.now();
-  const bucket = rateBuckets[key];
+  const bucket = rateBuckets.get(key);
   if (!bucket || bucket.resetAt <= now) {
-    rateBuckets[key] = { count: 1, resetAt: now + windowMs };
+    rateBuckets.set(key, { count: 1, resetAt: now + windowMs });
+    enforceCap(rateBuckets);
     return false;
   }
   bucket.count++;
@@ -190,14 +202,14 @@ function isBot(ua) {
 }
 
 // ── Visit deduplication (IP + shortId, 10-min window) ──────────────────
-const recentVisits = {};          // key → expireAt
+const recentVisits = new Map();   // key → expireAt
 const DEDUP_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 
 // Piggy-back on the existing cleanup interval for stale dedup entries
 setInterval(() => {
     const now = Date.now();
-    for (const key in recentVisits) {
-        if (recentVisits[key] <= now) delete recentVisits[key];
+    for (const [key, expireAt] of recentVisits) {
+        if (expireAt <= now) recentVisits.delete(key);
     }
 }, CLEANUP_INTERVAL);
 
@@ -208,8 +220,10 @@ setInterval(() => {
 function isDuplicateVisit(ip, shortId) {
     const key = `dedup:${ip}:${shortId}`;
     const now = Date.now();
-    if (recentVisits[key] && recentVisits[key] > now) return true;
-    recentVisits[key] = now + DEDUP_WINDOW_MS;
+    const expireAt = recentVisits.get(key);
+    if (expireAt && expireAt > now) return true;
+    recentVisits.set(key, now + DEDUP_WINDOW_MS);
+    enforceCap(recentVisits);
     return false;
 }
 
