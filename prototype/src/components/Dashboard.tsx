@@ -21,7 +21,7 @@ function Dashboard() {
             if (!window.ethereum) return;
 
             try {
-                const res = await fetch('http://localhost:3001/stats');
+                const res = await fetch('http://localhost:5001/stats');
                 const stats = await res.json();
                 setVisitCounts(stats);
             } catch (e) {
@@ -71,7 +71,7 @@ function Dashboard() {
 
         const statsInterval = setInterval(async () => {
             try {
-                const res = await fetch('http://localhost:3001/stats');
+                const res = await fetch('http://localhost:5001/stats');
                 const stats = await res.json();
                 setVisitCounts(stats);
             } catch (e) {

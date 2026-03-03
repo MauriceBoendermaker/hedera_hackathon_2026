@@ -40,7 +40,7 @@ function RedirectPage() {
                 }
 
                 try {
-                    await fetch('http://localhost:3001/track', {
+                    await fetch('http://localhost:5001/track', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
