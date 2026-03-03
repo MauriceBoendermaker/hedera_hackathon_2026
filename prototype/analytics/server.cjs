@@ -316,13 +316,26 @@ app.post('/hcs/submit', async (req, res) => {
     return res.status(400).json({ error: 'Payload exceeds 1024-byte HCS limit' });
   }
 
-  try {
-    const submitTx = await new TopicMessageSubmitTransaction()
-      .setTopicId(HCS_TOPIC_ID)
-      .setMessage(payload)
-      .execute(hederaClient);
+  const HCS_TIMEOUT_MS = 10000;
 
-    const receipt = await submitTx.getReceipt(hederaClient);
+  try {
+    const submitTx = await Promise.race([
+      new TopicMessageSubmitTransaction()
+        .setTopicId(HCS_TOPIC_ID)
+        .setMessage(payload)
+        .execute(hederaClient),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('HCS_TIMEOUT')), HCS_TIMEOUT_MS)
+      ),
+    ]);
+
+    const receipt = await Promise.race([
+      submitTx.getReceipt(hederaClient),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('HCS_TIMEOUT')), HCS_TIMEOUT_MS)
+      ),
+    ]);
+
     const sequenceNumber = receipt.topicSequenceNumber.toString();
 
     console.log(`HCS message submitted: seq=${sequenceNumber}, slug=${slug}`);
@@ -330,6 +343,9 @@ app.post('/hcs/submit', async (req, res) => {
     return res.json({ sequenceNumber, topicId: HCS_TOPIC_ID });
   } catch (err) {
     console.error('HCS submit failed:', err.message);
+    if (err.message === 'HCS_TIMEOUT') {
+      return res.status(504).json({ error: 'HCS submission timed out' });
+    }
     return res.status(500).json({ error: 'HCS submission failed' });
   }
 });
