@@ -74,6 +74,22 @@ app.use((req, res, next) => {
     next();
 });
 
+// ── Health check ───────────────────────────────────────────────────────
+app.get('/health', (req, res) => {
+    fs.access(LOG_FILE, fs.constants.R_OK | fs.constants.W_OK, (err) => {
+        const logOk = !err;
+        const status = logOk ? 'ok' : 'degraded';
+        const code = logOk ? 200 : 503;
+
+        res.status(code).json({
+            status,
+            uptime: Math.floor(process.uptime()),
+            log: logOk ? 'readable' : 'inaccessible',
+            hcs: hederaClient ? 'configured' : 'disabled',
+        });
+    });
+});
+
 // ── /track input validation ────────────────────────────────────────────
 const VALID_SHORT_ID = /^[a-zA-Z0-9_-]{1,32}$/;
 const MAX_REFERRER_LEN = 2048;
