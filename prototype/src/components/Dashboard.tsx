@@ -18,26 +18,30 @@ function Dashboard() {
     const [visitCounts, setVisitCounts] = useState<Record<string, number>>({});
 
     useEffect(() => {
+        let cancelled = false;
+        const abortController = new AbortController();
+
         async function loadLinks() {
             if (!window.ethereum) return;
 
             try {
-                const res = await fetch(`${ANALYTICS_URL}/stats`);
+                const res = await fetch(`${ANALYTICS_URL}/stats`, { signal: abortController.signal });
                 const stats = await res.json();
-                setVisitCounts(stats);
+                if (!cancelled) setVisitCounts(stats);
             } catch (e) {
-                console.warn('Could not fetch visit stats');
+                if (!cancelled) console.warn('Could not fetch visit stats');
             }
 
             try {
                 if (typeof window === 'undefined' || !window.ethereum) {
-                    ShowToast('MetaMask not detected. Please install MetaMask to use this feature.', 'danger');
+                    if (!cancelled) ShowToast('MetaMask not detected. Please install MetaMask to use this feature.', 'danger');
                     return;
                 }
 
-                setLoading(true);
+                if (!cancelled) setLoading(true);
 
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                if (cancelled) return;
                 if (!accounts || accounts.length === 0) {
                     ShowToast('Wallet connection rejected or failed.', 'danger');
                     return;
@@ -46,10 +50,12 @@ function Dashboard() {
                 const provider = new ethers.BrowserProvider(window.ethereum);
                 const signer = await provider.getSigner();
                 const address = await signer.getAddress();
+                if (cancelled) return;
                 setAccount(address);
 
                 const contract = new ethers.Contract(CONTRACT_ADDRESS, abi, provider);
                 const shortIds: string[] = await contract.getUserLinks(address);
+                if (cancelled) return;
 
                 const formatted = await Promise.all(
                     shortIds.map(async (shortId) => {
@@ -58,29 +64,35 @@ function Dashboard() {
                     })
                 );
 
-
-                setLinks(formatted);
-                setError('');
+                if (!cancelled) {
+                    setLinks(formatted);
+                    setError('');
+                }
             } catch (err: any) {
-                console.error(err);
+                if (!cancelled) console.error(err);
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         }
 
         loadLinks();
 
         const statsInterval = setInterval(async () => {
+            if (cancelled) return;
             try {
-                const res = await fetch(`${ANALYTICS_URL}/stats`);
+                const res = await fetch(`${ANALYTICS_URL}/stats`, { signal: abortController.signal });
                 const stats = await res.json();
-                setVisitCounts(stats);
+                if (!cancelled) setVisitCounts(stats);
             } catch (e) {
-                console.warn('Could not refresh visit stats');
+                if (!cancelled) console.warn('Could not refresh visit stats');
             }
         }, 5000);
 
-        return () => clearInterval(statsInterval);
+        return () => {
+            cancelled = true;
+            abortController.abort();
+            clearInterval(statsInterval);
+        };
     }, []);
 
     function copyToClipboard(shortId: string) {
