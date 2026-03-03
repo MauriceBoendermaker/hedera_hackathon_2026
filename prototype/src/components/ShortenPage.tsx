@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import MouseDots from './misc/MouseDots';
 import { QRCodeCanvas } from 'qrcode.react';
 import { UrlForms } from './UrlForms';
-import { getHashScanTxUrl, PROJECT_URL } from 'utils/HederaConfig';
+import { PROJECT_URL } from 'utils/HederaConfig';
 
 declare global {
     interface Window {
@@ -11,9 +11,6 @@ declare global {
 }
 
 function ShortenPage() {
-    const [status, setStatus] = useState('');
-    const [txHash, setTxHash] = useState('');
-    const [generatedShortId, setGeneratedShortId] = useState('');
     const qrRef = useRef<HTMLCanvasElement | null>(null);
     const [qrUrl, setQrUrl] = useState('');
     const [modalMouse, setModalMouse] = useState({ x: 0, y: 0 });
@@ -25,7 +22,7 @@ function ShortenPage() {
         const url = canvas.toDataURL('image/png');
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${generatedShortId}.png`;
+        a.download = 'qr-code.png';
         a.click();
     }
 
@@ -74,8 +71,6 @@ function ShortenPage() {
         };
     }, []);
 
-    const fullShortUrl = `${PROJECT_URL}/#/${generatedShortId}`;
-
     return (
         <>
             <MouseDots />
@@ -91,35 +86,6 @@ function ShortenPage() {
                         <div className="col-md-8 glass-card">
                             <h1 className="title-glow pb-4">Shorten a long link</h1>
                             <UrlForms />
-                            <div className="status">
-                                {status && <p className="">{status}</p>}
-                                {txHash && (
-                                    <a href={getHashScanTxUrl(txHash)} target="_blank" rel="noopener noreferrer">
-                                        View on HashScan
-                                    </a>
-                                )}
-                                {generatedShortId && (
-                                    <div className="mt-3 text-center">
-                                        <strong>Your short link:</strong><br />
-                                        <a href={fullShortUrl} target="_blank" rel="noopener noreferrer">{fullShortUrl}</a>
-                                        <div className="mt-3">
-                                            <QRCodeCanvas
-                                                value={fullShortUrl}
-                                                size={160}
-                                                bgColor="#ffffff"
-                                                fgColor="#000000"
-                                                level="H"
-                                                includeMargin={true}
-                                                ref={qrRef}
-                                            />
-                                            <br />
-                                            <button className="btn btn-outline-light mt-2" onClick={downloadQR}>
-                                                Download QR Code
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
                         </div>
                     </div>
                 </div>
