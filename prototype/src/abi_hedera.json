@@ -1,193 +1,197 @@
 [
     {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "user",
-                "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "string",
-                "name": "shortId",
-                "type": "string"
-            },
-            {
-                "indexed": false,
-                "internalType": "string",
-                "name": "originalUrl",
-                "type": "string"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "createdAt",
-                "type": "uint256"
-            }
-        ],
         "name": "ShortUrlCreated",
-        "type": "event"
-    },
-    {
+        "type": "event",
         "inputs": [
             {
-                "internalType": "string",
-                "name": "customId",
-                "type": "string"
-            },
-            {
-                "internalType": "string",
-                "name": "originalUrl",
-                "type": "string"
-            }
-        ],
-        "name": "createCustomShortUrl",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "string",
-                "name": "originalUrl",
-                "type": "string"
-            }
-        ],
-        "name": "generateShortUrl",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "string",
-                "name": "shortId",
-                "type": "string"
-            }
-        ],
-        "name": "getOriginalUrl",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "string",
-                "name": "shortId",
-                "type": "string"
-            }
-        ],
-        "name": "getShortLink",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "originalUrl",
-                "type": "string"
-            },
-            {
-                "internalType": "uint256",
-                "name": "createdAt",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
                 "name": "user",
-                "type": "address"
-            }
-        ],
-        "name": "getUserLinks",
-        "outputs": [
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
             {
-                "internalType": "string[]",
-                "name": "",
-                "type": "string[]"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "string",
                 "name": "shortId",
-                "type": "string"
-            }
-        ],
-        "name": "shortIdExists",
-        "outputs": [
+                "type": "string",
+                "indexed": false,
+                "internalType": "string"
+            },
             {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "name": "urlMapping",
-        "outputs": [
-            {
-                "internalType": "string",
                 "name": "originalUrl",
-                "type": "string"
+                "type": "string",
+                "indexed": false,
+                "internalType": "string"
             },
             {
-                "internalType": "uint256",
                 "name": "createdAt",
-                "type": "uint256"
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
             }
         ],
-        "stateMutability": "view",
-        "type": "function"
+        "anonymous": false
     },
     {
+        "name": "createCustomShortUrl",
+        "type": "function",
         "inputs": [
             {
-                "internalType": "address",
-                "name": "",
-                "type": "address"
+                "name": "customId",
+                "type": "string",
+                "internalType": "string"
             },
             {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
+                "name": "originalUrl",
+                "type": "string",
+                "internalType": "string"
             }
         ],
-        "name": "userLinks",
+        "outputs": [],
+        "stateMutability": "payable"
+    },
+    {
+        "name": "generateShortUrl",
+        "type": "function",
+        "inputs": [
+            {
+                "name": "originalUrl",
+                "type": "string",
+                "internalType": "string"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "name": "getOriginalUrl",
+        "type": "function",
+        "inputs": [
+            {
+                "name": "shortId",
+                "type": "string",
+                "internalType": "string"
+            }
+        ],
         "outputs": [
             {
-                "internalType": "string",
                 "name": "",
-                "type": "string"
+                "type": "string",
+                "internalType": "string"
             }
         ],
-        "stateMutability": "view",
-        "type": "function"
+        "stateMutability": "view"
+    },
+    {
+        "name": "getShortLink",
+        "type": "function",
+        "inputs": [
+            {
+                "name": "shortId",
+                "type": "string",
+                "internalType": "string"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "originalUrl",
+                "type": "string",
+                "internalType": "string"
+            },
+            {
+                "name": "createdAt",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "name": "getUserLinks",
+        "type": "function",
+        "inputs": [
+            {
+                "name": "user",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "string[]",
+                "internalType": "string[]"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "name": "shortIdExists",
+        "type": "function",
+        "inputs": [
+            {
+                "name": "shortId",
+                "type": "string",
+                "internalType": "string"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "bool",
+                "internalType": "bool"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "name": "urlMapping",
+        "type": "function",
+        "inputs": [
+            {
+                "name": "",
+                "type": "string",
+                "internalType": "string"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "originalUrl",
+                "type": "string",
+                "internalType": "string"
+            },
+            {
+                "name": "createdAt",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "name": "userLinks",
+        "type": "function",
+        "inputs": [
+            {
+                "name": "",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "string",
+                "internalType": "string"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "receive",
+        "stateMutability": "payable"
     }
 ]
