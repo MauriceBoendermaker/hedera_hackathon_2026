@@ -74,9 +74,12 @@ function App() {
   return (
     <ErrorBoundary>
     <Router>
+      <a href="#main-content" className="skip-to-content">Skip to content</a>
       <Nav />
 
-      <AnimatedRoutes />
+      <main id="main-content">
+        <AnimatedRoutes />
+      </main>
 
       <Footer />
       <div

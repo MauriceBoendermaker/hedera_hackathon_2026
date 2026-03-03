@@ -1,10 +1,52 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import { ShowToast } from '../utils/ShowToast';
 
 export default function Nav() {
     const [isConnected, setIsConnected] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const sidebarRef = useRef<HTMLDivElement>(null);
+
+    const closeSidebar = useCallback(() => setSidebarOpen(false), []);
+
+    // Focus trap + Escape key for sidebar
+    useEffect(() => {
+        if (!sidebarOpen) return;
+
+        const sidebar = sidebarRef.current;
+        if (!sidebar) return;
+
+        const focusable = sidebar.querySelectorAll<HTMLElement>(
+            'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        first?.focus();
+
+        function handleKeyDown(e: KeyboardEvent) {
+            if (e.key === 'Escape') {
+                closeSidebar();
+                return;
+            }
+            if (e.key !== 'Tab') return;
+
+            if (e.shiftKey) {
+                if (document.activeElement === first) {
+                    e.preventDefault();
+                    last?.focus();
+                }
+            } else {
+                if (document.activeElement === last) {
+                    e.preventDefault();
+                    first?.focus();
+                }
+            }
+        }
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [sidebarOpen, closeSidebar]);
 
     useEffect(() => {
         if (window.ethereum) {
@@ -46,6 +88,7 @@ export default function Nav() {
                                         className="navbar-toggler"
                                         type="button"
                                         onClick={() => setSidebarOpen(!sidebarOpen)}
+                                        aria-label="Open navigation menu"
                                     >
                                         <span className="navbar-toggler-icon" />
                                     </button>
@@ -89,9 +132,9 @@ export default function Nav() {
             {sidebarOpen && (
                 <>
                     <div className="mobile-sidebar-backdrop" onClick={() => setSidebarOpen(false)} />
-                    <div className="mobile-sidebar">
+                    <div className="mobile-sidebar" ref={sidebarRef} role="dialog" aria-label="Navigation menu">
                         <div className="sidebar-content">
-                            <button className="close-btn" onClick={() => setSidebarOpen(false)}>&times;</button>
+                            <button className="close-btn" onClick={() => setSidebarOpen(false)} aria-label="Close menu">&times;</button>
                             <NavLink to="/" className="nav-link" onClick={() => setSidebarOpen(false)}>Home</NavLink>
                             <NavLink to="/how-it-works" className="nav-link" onClick={() => setSidebarOpen(false)}>How it works</NavLink>
                             <NavLink to="/about" className="nav-link" onClick={() => setSidebarOpen(false)}>About</NavLink>

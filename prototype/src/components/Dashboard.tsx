@@ -303,12 +303,14 @@ function Dashboard() {
                                                                 className="btn btn-sm btn-outline-light"
                                                                 onClick={() => copyToClipboard(link.shortId)}
                                                                 title="Copy short link"
+                                                                aria-label="Copy short link"
                                                             >
                                                                 <i className="fas fa-copy" />
                                                             </button>
                                                             <button
                                                                 className="btn btn-sm btn-outline-light"
                                                                 title="Show QR"
+                                                                aria-label="Show QR code"
                                                                 onClick={() => {
                                                                     setQrTarget(shortUrl);
                                                                     setTimeout(() => {
@@ -336,6 +338,7 @@ function Dashboard() {
                                                                             rel="noopener noreferrer"
                                                                             className="btn btn-sm btn-outline-light"
                                                                             title="View on HashScan"
+                                                                            aria-label="View transaction on HashScan"
                                                                         >
                                                                             <i className="fas fa-external-link-alt" />
                                                                         </a>
@@ -346,6 +349,7 @@ function Dashboard() {
                                                                                 ShowToast('Tx hash copied!', 'success');
                                                                             }}
                                                                             title="Copy tx hash"
+                                                                            aria-label="Copy transaction hash"
                                                                         >
                                                                             <i className="fas fa-hashtag" />
                                                                         </button>

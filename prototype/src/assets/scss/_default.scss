@@ -19,10 +19,18 @@ h6 {
     line-height: normal;
 }
 
-a,
-button,
-input {
-    cursor: none !important;
+@media (hover: hover) and (pointer: fine) {
+    a,
+    button,
+    input,
+    select {
+        cursor: none !important;
+    }
+
+    html,
+    body {
+        cursor: none;
+    }
 }
 
 html,
@@ -34,7 +42,6 @@ body {
     overflow-y: auto;
     overflow-x: hidden;
     line-height: 1;
-    cursor: none;
 
     &::before,
     &::after {
@@ -76,8 +83,7 @@ body {
 }
 
 main {
-    min-height: calc(100vh - 202px);
-    margin-top: 120px; // match navbar
+    flex: 1;
 }
 
 .table {
@@ -198,6 +204,25 @@ main {
     padding: 30px;
     max-height: 70vh;
     overflow: hidden;
+}
+
+.skip-to-content {
+    position: fixed;
+    top: -100%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100000;
+    padding: 10px 20px;
+    background: $secondary-color;
+    color: #000;
+    border-radius: 0 0 $corner-radius $corner-radius;
+    font-weight: 600;
+    text-decoration: none;
+    transition: top 0.2s ease;
+
+    &:focus {
+        top: 0;
+    }
 }
 
 @keyframes pageFadeIn {
