@@ -33,7 +33,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 Plans:
 - [x] 01-01-PLAN.md — Circles removal + Hedera config foundation (Wave 1)
 - [ ] 01-02-PLAN.md — Contract deploy + UrlForms rewrite for HBAR payment (Wave 2)
-- [ ] 01-03-PLAN.md — Dashboard HashScan + UI branding for Hedera (Wave 2)
+- [x] 01-03-PLAN.md — Dashboard HashScan + UI branding for Hedera (Wave 2)
 
 ### Phase 2: HCS Audit Trail + Dual Proof UI
 **Goal**: Every URL creation produces two on-chain records (EVM event + HCS consensus message) and the UI surfaces both proofs
@@ -69,6 +69,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Hedera EVM Migration | 1/3 | In progress | - |
+| 1. Hedera EVM Migration | 2/3 | In progress | - |
 | 2. HCS Audit Trail + Dual Proof UI | 0/TBD | Not started | - |
 | 3. Docs and Demo Polish | 0/TBD | Not started | - |
