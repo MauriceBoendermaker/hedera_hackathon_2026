@@ -333,16 +333,16 @@ export function UrlForms() {
                 </div>
 
                 <div className="button-group mt-3">
+                    <div className="price-disclaimer small mb-2" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                        <i className="fas fa-info-circle me-1" />
+                        {isCustomMode
+                            ? 'Cost: 1 HBAR + gas fee'
+                            : 'Cost: Free (gas fee only)'}
+                    </div>
                     <button type="submit" className="btn btn-primary w-100" disabled={submitting || !hasWallet} aria-busy={submitting}>
                         {submitting && <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />}
                         {submitting ? 'Submitting...' : 'Submit to Blockchain'}
                     </button>
-                </div>
-
-                <div className="price-disclaimer small mt-3">
-                    {isCustomMode
-                        ? 'Cost: 1 HBAR + gas fee'
-                        : 'Cost: Free (gas fee only)'}
                 </div>
             </form>
 
