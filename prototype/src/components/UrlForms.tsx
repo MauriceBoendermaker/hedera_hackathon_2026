@@ -280,7 +280,8 @@ export function UrlForms() {
                 </div>
 
                 <div className="button-group mt-3">
-                    <button type="submit" className="btn btn-primary w-100" disabled={submitting || !hasWallet}>
+                    <button type="submit" className="btn btn-primary w-100" disabled={submitting || !hasWallet} aria-busy={submitting}>
+                        {submitting && <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />}
                         {submitting ? 'Submitting...' : 'Submit to Blockchain'}
                     </button>
                 </div>
