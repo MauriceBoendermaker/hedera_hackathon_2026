@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { ethers } from 'ethers';
 import abi from '../../abi_hedera.json';
@@ -6,64 +6,66 @@ import { CONTRACT_ADDRESS, HEDERA_RPC_URL, ANALYTICS_URL } from 'utils/HederaCon
 
 function RedirectPage() {
     const { shortId } = useParams() as { shortId: string };
+    const [error, setError] = useState('');
 
     useEffect(() => {
         async function resolveRedirect() {
-            console.log("Received shortId from route:", shortId);
             const id1 = shortId.startsWith('/') ? shortId.slice(1) : shortId;
             const id2 = shortId;
 
             try {
                 const provider = new ethers.JsonRpcProvider(HEDERA_RPC_URL);
                 const contract = new ethers.Contract(CONTRACT_ADDRESS, abi, provider);
-                console.log("Connected to contract:", contract.address);
 
                 let destination = '';
                 try {
-                    console.log("Trying with id1:", id1);
                     destination = await contract.getOriginalUrl(id1);
-                    console.log("Result from id1:", destination);
-                } catch (e) {
-                    console.warn("First lookup failed, trying fallback...");
+                } catch {
+                    // First lookup failed, try fallback
                 }
 
                 if (!destination || destination.trim() === '') {
-                    console.log("Trying with id2:", id2);
                     destination = await contract.getOriginalUrl(id2);
-                    console.log("Result from id2:", destination);
                 }
 
                 if (!destination || destination.trim() === '') {
-                    throw new Error("Empty destination after both attempts");
+                    setError('This short link does not exist or has no destination.');
+                    return;
                 }
 
-                try {
-                    await fetch(`${ANALYTICS_URL}/track`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            shortId,
-                            timestamp: Date.now(),
-                            referrer: document.referrer,
-                            userAgent: navigator.userAgent
-                        })
-                    });
-                    console.log('Analytics posted successfully');
-                } catch (err) {
-                    console.warn('Analytics failed:', err);
-                }
+                // Analytics tracking — fire-and-forget, don't block redirect
+                fetch(`${ANALYTICS_URL}/track`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        shortId,
+                        timestamp: Date.now(),
+                        referrer: document.referrer,
+                        userAgent: navigator.userAgent
+                    })
+                }).catch(() => {});
 
                 setTimeout(() => {
                     window.location.href = destination;
                 }, 300);
-            } catch (err) {
-                console.error("Redirect failed:", err);
-                window.location.href = '/';
+            } catch (err: any) {
+                const message = err?.reason || err?.message || 'Unknown error';
+                setError(`Could not resolve this link: ${message}`);
             }
         }
 
         resolveRedirect();
     }, [shortId]);
+
+    if (error) {
+        return (
+            <div className="container text-center py-5">
+                <h3 className="text-light mb-3">Link not found</h3>
+                <p className="text-light mb-4">{error}</p>
+                <a href="/" className="btn btn-outline-light">Go to Home</a>
+            </div>
+        );
+    }
 
     return <p>Redirecting...</p>;
 }

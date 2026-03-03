@@ -8,6 +8,7 @@ import Dashboard from './components/Dashboard';
 import RedirectPage from './components/utils/RedirectPage';
 import HowItWorks from 'components/How-it-works';
 import About from './components/About';
+import { ErrorBoundary } from './components/utils/ErrorBoundary';
 
 import "./assets/scss/style.scss";
 
@@ -54,6 +55,7 @@ function App() {
   }, []);
 
   return (
+    <ErrorBoundary>
     <Router>
       <Nav />
 
@@ -73,6 +75,7 @@ function App() {
         style={{ zIndex: 1055 }}
       ></div>
     </Router>
+    </ErrorBoundary>
   );
 }
 

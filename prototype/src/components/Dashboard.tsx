@@ -22,15 +22,21 @@ function Dashboard() {
 
             try {
                 const res = await fetch(`${ANALYTICS_URL}/stats`, { signal: abortController.signal });
+                if (!res.ok) throw new Error(`Stats request failed (${res.status})`);
                 const stats = await res.json();
                 if (!cancelled) setVisitCounts(stats);
             } catch (e) {
-                if (!cancelled) console.warn('Could not fetch visit stats');
+                if (!cancelled && !(e instanceof DOMException)) {
+                    ShowToast('Could not load visit stats. Analytics server may be down.', 'danger');
+                }
             }
 
             try {
                 if (typeof window === 'undefined' || !window.ethereum) {
-                    if (!cancelled) ShowToast('MetaMask not detected. Please install MetaMask to use this feature.', 'danger');
+                    if (!cancelled) {
+                        setError('MetaMask not detected. Please install MetaMask to use this feature.');
+                        setLoading(false);
+                    }
                     return;
                 }
 
@@ -39,7 +45,7 @@ function Dashboard() {
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                 if (cancelled) return;
                 if (!accounts || accounts.length === 0) {
-                    ShowToast('Wallet connection rejected or failed.', 'danger');
+                    setError('Wallet connection rejected or failed.');
                     return;
                 }
 
@@ -65,7 +71,10 @@ function Dashboard() {
                     setError('');
                 }
             } catch (err: any) {
-                if (!cancelled) console.error(err);
+                if (!cancelled) {
+                    const message = err?.reason || err?.message || 'Unknown error';
+                    setError(`Failed to load links: ${message}`);
+                }
             } finally {
                 if (!cancelled) setLoading(false);
             }
@@ -73,14 +82,25 @@ function Dashboard() {
 
         loadLinks();
 
+        let pollFailures = 0;
         const statsInterval = setInterval(async () => {
             if (cancelled) return;
             try {
                 const res = await fetch(`${ANALYTICS_URL}/stats`, { signal: abortController.signal });
+                if (!res.ok) throw new Error(`Stats request failed (${res.status})`);
                 const stats = await res.json();
-                if (!cancelled) setVisitCounts(stats);
+                if (!cancelled) {
+                    setVisitCounts(stats);
+                    pollFailures = 0;
+                }
             } catch (e) {
-                if (!cancelled) console.warn('Could not refresh visit stats');
+                if (!cancelled && !(e instanceof DOMException)) {
+                    pollFailures++;
+                    if (pollFailures >= 3) {
+                        ShowToast('Visit stats are temporarily unavailable.', 'danger');
+                        pollFailures = 0;
+                    }
+                }
             }
         }, 5000);
 
