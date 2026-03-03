@@ -4,7 +4,9 @@
 
 @media (max-width: 991.98px) {
     .navbar {
-        height: 56px;
+        height: 64px;
+        margin: 14px;
+        width: calc(100% - 28px);
     }
 
     .mobile-sidebar {
@@ -16,7 +18,9 @@
 
 @media (max-width: 575.98px) {
     .navbar {
-        height: 52px;
+        height: 56px;
+        margin: 10px;
+        width: calc(100% - 20px);
 
         .navbar-brand {
             font-size: 20px;
@@ -48,7 +52,9 @@
 
 @media (max-width: 479.98px) {
     .navbar {
-        height: 48px;
+        height: 50px;
+        margin: 8px;
+        width: calc(100% - 16px);
 
         .navbar-brand {
             font-size: 18px;
