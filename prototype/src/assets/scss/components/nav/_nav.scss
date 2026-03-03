@@ -58,8 +58,15 @@
     z-index: 1051;
     padding: 2rem;
     box-shadow: 5px 0 20px rgba(0, 0, 0, 0.3);
-    transition: transform 0.3s ease-in-out;
-    transform: translateX(0);
+    transition: transform 0.25s ease-in-out, visibility 0s 0.25s;
+    transform: translateX(-100%);
+    visibility: hidden;
+
+    &--open {
+        transform: translateX(0);
+        visibility: visible;
+        transition: transform 0.25s ease-in-out, visibility 0s;
+    }
 
     .sidebar-content {
         display: flex;
@@ -93,9 +100,19 @@
 }
 
 .mobile-sidebar-backdrop {
-    content: '';
     position: fixed;
     inset: 0;
     z-index: 1050;
     background: rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease-in-out, visibility 0s 0.25s;
+    pointer-events: none;
+
+    &--open {
+        opacity: 1;
+        visibility: visible;
+        transition: opacity 0.25s ease-in-out, visibility 0s;
+        pointer-events: auto;
+    }
 }

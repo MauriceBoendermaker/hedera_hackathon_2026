@@ -129,28 +129,34 @@ export default function Nav() {
                 </nav>
             </div>
 
-            {sidebarOpen && (
-                <>
-                    <div className="mobile-sidebar-backdrop" onClick={() => setSidebarOpen(false)} />
-                    <div className="mobile-sidebar" ref={sidebarRef} role="dialog" aria-label="Navigation menu">
-                        <div className="sidebar-content">
-                            <button className="close-btn" onClick={() => setSidebarOpen(false)} aria-label="Close menu">&times;</button>
-                            <NavLink to="/" className="nav-link" onClick={() => setSidebarOpen(false)}>Home</NavLink>
-                            <NavLink to="/how-it-works" className="nav-link" onClick={() => setSidebarOpen(false)}>How it works</NavLink>
-                            <NavLink to="/about" className="nav-link" onClick={() => setSidebarOpen(false)}>About</NavLink>
-                            {!isConnected ? (
-                                <button className="btn btn-outline-light mt-3" onClick={() => { connectWallet(); setSidebarOpen(false); }}>
-                                    Connect Wallet
-                                </button>
-                            ) : (
-                                <NavLink to="/dashboard" className="btn-link" onClick={() => setSidebarOpen(false)}>
-                                    Dashboard
-                                </NavLink>
-                            )}
-                        </div>
-                    </div>
-                </>
-            )}
+            <div
+                className={`mobile-sidebar-backdrop${sidebarOpen ? ' mobile-sidebar-backdrop--open' : ''}`}
+                onClick={closeSidebar}
+                aria-hidden="true"
+            />
+            <div
+                className={`mobile-sidebar${sidebarOpen ? ' mobile-sidebar--open' : ''}`}
+                ref={sidebarRef}
+                role="dialog"
+                aria-label="Navigation menu"
+                aria-hidden={!sidebarOpen}
+            >
+                <div className="sidebar-content">
+                    <button className="close-btn" onClick={closeSidebar} aria-label="Close menu">&times;</button>
+                    <NavLink to="/" className="nav-link" onClick={closeSidebar}>Home</NavLink>
+                    <NavLink to="/how-it-works" className="nav-link" onClick={closeSidebar}>How it works</NavLink>
+                    <NavLink to="/about" className="nav-link" onClick={closeSidebar}>About</NavLink>
+                    {!isConnected ? (
+                        <button className="btn btn-outline-light mt-3" onClick={() => { connectWallet(); closeSidebar(); }}>
+                            Connect Wallet
+                        </button>
+                    ) : (
+                        <NavLink to="/dashboard" className="btn-link" onClick={closeSidebar}>
+                            Dashboard
+                        </NavLink>
+                    )}
+                </div>
+            </div>
         </>
     );
 }
