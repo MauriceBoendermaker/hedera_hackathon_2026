@@ -35,3 +35,6 @@ yarn-error.log*
 !.claude/settings.json
 
 prototype/analytics/logs.json
+prototype/analytics/analytics.db
+prototype/analytics/analytics.db-wal
+prototype/analytics/analytics.db-shm
