@@ -236,7 +236,9 @@ export function UrlForms() {
 
             <form onSubmit={handleSubmit} role="tabpanel" id={isCustomMode ? 'tab-custom' : 'tab-random'} aria-labelledby={isCustomMode ? 'tab-btn-custom' : 'tab-btn-random'}>
                 <div className="mb-3">
+                    <label htmlFor="original-url" className="visually-hidden">Original URL</label>
                     <input
+                        id="original-url"
                         type="text"
                         value={originalUrl}
                         onChange={(e) => {
@@ -253,10 +255,13 @@ export function UrlForms() {
                         return (
                             <>
                                 <div className="input-group mt-3">
-                                    <span className="input-group-text">durl.dev/</span>
+                                    <label htmlFor="custom-slug" className="visually-hidden">Custom slug</label>
+                                    <span className="input-group-text" id="custom-slug-prefix">durl.dev/</span>
                                     <input
+                                        id="custom-slug"
                                         type="text"
                                         value={shortUrl}
+                                        aria-describedby="custom-slug-prefix"
                                         onChange={(e) => {
                                             const raw = e.target.value;
 
@@ -356,6 +361,7 @@ export function UrlForms() {
                                     }
                                 }}
                                 title="Copy short link"
+                                aria-label="Copy short link"
                             >
                                 <i className="fas fa-copy" />
                             </button>
