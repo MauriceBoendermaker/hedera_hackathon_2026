@@ -1,30 +1,32 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 import Nav from './components/misc/Nav';
 import { Footer } from './components/misc/Footer';
-import ShortenPage from './components/ShortenPage';
-import Dashboard from './components/Dashboard';
-import RedirectPage from './components/utils/RedirectPage';
-import HowItWorks from 'components/How-it-works';
-import About from './components/About';
 import { ErrorBoundary } from './components/utils/ErrorBoundary';
-
 import "./assets/scss/style.scss";
+
+const ShortenPage = lazy(() => import('./components/ShortenPage'));
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const RedirectPage = lazy(() => import('./components/utils/RedirectPage'));
+const HowItWorks = lazy(() => import('components/How-it-works'));
+const About = lazy(() => import('./components/About'));
 
 function AnimatedRoutes() {
   const location = useLocation();
 
   return (
     <div key={location.pathname} className="page-transition">
-      <Routes location={location}>
-        <Route path="/" element={<ShortenPage />} />
-        <Route path="/how-it-works" element={<HowItWorks />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/:shortId" element={<RedirectPage />} />
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
+      <Suspense fallback={<div className="route-loader"><div className="spinner-border text-primary" role="status"><span className="visually-hidden">Loading...</span></div></div>}>
+        <Routes location={location}>
+          <Route path="/" element={<ShortenPage />} />
+          <Route path="/how-it-works" element={<HowItWorks />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/:shortId" element={<RedirectPage />} />
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </Suspense>
     </div>
   );
 }
