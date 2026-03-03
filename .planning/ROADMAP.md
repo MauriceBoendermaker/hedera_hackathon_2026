@@ -31,7 +31,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Circles removal + Hedera config foundation (Wave 1)
+- [x] 01-01-PLAN.md — Circles removal + Hedera config foundation (Wave 1)
 - [ ] 01-02-PLAN.md — Contract deploy + UrlForms rewrite for HBAR payment (Wave 2)
 - [ ] 01-03-PLAN.md — Dashboard HashScan + UI branding for Hedera (Wave 2)
 
@@ -69,6 +69,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Hedera EVM Migration | 0/3 | Not started | - |
+| 1. Hedera EVM Migration | 1/3 | In progress | - |
 | 2. HCS Audit Trail + Dual Proof UI | 0/TBD | Not started | - |
 | 3. Docs and Demo Polish | 0/TBD | Not started | - |
