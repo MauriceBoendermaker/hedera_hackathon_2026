@@ -215,7 +215,27 @@ function Dashboard() {
                     <div className="col-md-10 glass-card">
                         <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
                             <h2 className="title-glow m-0">Your Shortened Links</h2>
-                            <span className="text-light small">Wallet: {account}</span>
+                            {account && (
+                                <span className="text-light small d-inline-flex align-items-center gap-1" title={account}>
+                                    Wallet: {account.slice(0, 6)}...{account.slice(-4)}
+                                    <button
+                                        className="btn btn-sm btn-outline-light border-0 p-0 ms-1"
+                                        style={{ fontSize: '12px', lineHeight: 1 }}
+                                        onClick={async () => {
+                                            try {
+                                                await navigator.clipboard.writeText(account);
+                                                ShowToast('Address copied to clipboard', 'success');
+                                            } catch {
+                                                ShowToast('Failed to copy address', 'danger');
+                                            }
+                                        }}
+                                        aria-label="Copy wallet address"
+                                        title="Copy full address"
+                                    >
+                                        <i className="fas fa-copy" />
+                                    </button>
+                                </span>
+                            )}
                         </div>
 
                         {error && (
