@@ -145,9 +145,39 @@ function Dashboard() {
                         {error && <div className="alert alert-danger">{error}</div>}
 
                         {loading ? (
-                            <div className="text-center my-5">
-                                <div className="spinner-border text-light" role="status" />
-                                <p className="mt-3">Loading links...</p>
+                            <div className="table-responsive">
+                                <table className="table table-dark align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>Short link</th>
+                                            <th>Original URL</th>
+                                            <th className="text-center">Actions</th>
+                                            <th className="text-center">Visits</th>
+                                            <th className="text-center">HashScan</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {[...Array(4)].map((_, i) => (
+                                            <tr key={i}>
+                                                <td><span className="skeleton skeleton--short" /></td>
+                                                <td><span className="skeleton skeleton--long" /></td>
+                                                <td className="text-center">
+                                                    <div className="d-flex justify-content-center gap-2">
+                                                        <span className="skeleton skeleton--btn" />
+                                                        <span className="skeleton skeleton--btn" />
+                                                    </div>
+                                                </td>
+                                                <td className="text-center"><span className="skeleton skeleton--num" /></td>
+                                                <td className="text-center">
+                                                    <div className="d-flex justify-content-center gap-2">
+                                                        <span className="skeleton skeleton--btn" />
+                                                        <span className="skeleton skeleton--btn" />
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         ) : links.length === 0 ? (
                             <div className="alert alert-danger">No links found for this wallet.</div>
