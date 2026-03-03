@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import MouseDots from './misc/MouseDots';
 import { QRCodeCanvas } from 'qrcode.react';
 import { UrlForms } from './UrlForms';
+import { getHashScanTxUrl } from 'utils/HederaConfig';
 
 const PROJECT_URL = process.env.REACT_APP_PROJECT_URL as string;
 
@@ -85,7 +86,7 @@ function ShortenPage() {
                     <div className="row justify-content-center">
                         <div className="col-lg-8 text-center">
                             <h1 className="title">Decentralized URL Shortener</h1>
-                            <p className="subtitle-glow mb-5">Trustless. On-chain. Powered by Circles.</p>
+                            <p className="subtitle-glow mb-5">Trustless. On-chain. Powered by Hedera.</p>
                         </div>
                     </div>
                     <div className="row justify-content-center mt-5">
@@ -95,8 +96,8 @@ function ShortenPage() {
                             <div className="status">
                                 {status && <p className="">{status}</p>}
                                 {txHash && (
-                                    <a href={`https://sepolia.etherscan.io/tx/${txHash}`} target="_blank" rel="noopener noreferrer">
-                                        View on Etherscan
+                                    <a href={getHashScanTxUrl(txHash)} target="_blank" rel="noopener noreferrer">
+                                        View on HashScan
                                     </a>
                                 )}
                                 {generatedShortId && (

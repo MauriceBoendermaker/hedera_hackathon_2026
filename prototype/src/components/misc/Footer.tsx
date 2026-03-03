@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React from 'react';
 
 export const Footer = () => {
     return (
@@ -12,6 +12,7 @@ export const Footer = () => {
                             &nbsp;and&nbsp;
                             <a className="btn-link" target="_blank" href="https://github.com/Adel-Atzouza">Adil</a>
                         </p>
+                        <p className="small mt-1">Built on <a className="btn-link" target="_blank" href="https://hedera.com" rel="noopener noreferrer">Hedera</a></p>
                     </div>
                 </div>
             </footer>

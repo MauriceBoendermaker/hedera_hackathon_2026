@@ -42,6 +42,7 @@ export default function Nav() {
                             <div className="col-12">
                                 <div className="d-flex justify-content-between align-items-center w-100">
                                     <Link className="navbar-brand" to="/">dURL <small>//dev</small></Link>
+                                    <span className="badge bg-secondary ms-2 small" style={{ fontSize: '0.65rem' }}>Built on Hedera</span>
                                     <button
                                         className="navbar-toggler"
                                         type="button"
