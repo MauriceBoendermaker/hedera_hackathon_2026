@@ -81,7 +81,18 @@ if (OPERATOR_ID && OPERATOR_KEY) {
   console.warn('WARNING: OPERATOR_ID/OPERATOR_KEY not set — /hcs/submit will be disabled');
 }
 
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '10kb' }));
+
+// ── Security headers ────────────────────────────────────────────────
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    res.setHeader('Content-Security-Policy', "default-src 'none'");
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    next();
+});
 
 // ── Trusted-proxy IP resolution ─────────────────────────────────────
 // Only trust X-Forwarded-For when the direct connection is from a known
