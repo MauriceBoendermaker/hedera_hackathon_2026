@@ -402,7 +402,7 @@ function Dashboard() {
         <section className="dashboard-container">
             <div className="container">
                 <div className="row justify-content-center">
-                    <div className="col-md-10 glass-card">
+                    <div className="col-md-10 glass-card" aria-busy={loading}>
                         <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
                             <h2 className="title-glow m-0">Your Shortened Links</h2>
                             {account && (
@@ -429,7 +429,7 @@ function Dashboard() {
                         </div>
 
                         {error && (
-                            <div className="alert alert-danger d-flex justify-content-between align-items-center">
+                            <div className="alert alert-danger d-flex justify-content-between align-items-center" role="alert">
                                 <span>{error}</span>
                                 <button
                                     className="btn btn-sm btn-outline-danger ms-3 flex-shrink-0"
@@ -440,8 +440,18 @@ function Dashboard() {
                             </div>
                         )}
 
+                        <div role="status" className="visually-hidden">
+                            {loading
+                                ? 'Loading your links\u2026'
+                                : error
+                                    ? error
+                                    : links.length === 0
+                                        ? 'No links found.'
+                                        : `${links.length} link${links.length === 1 ? '' : 's'} loaded.`}
+                        </div>
+
                         {loading ? (
-                            <div className="table-responsive" role="status" aria-busy="true" aria-label="Loading your links">
+                            <div className="table-responsive" aria-hidden="true">
                                 <table className="table table-dark align-middle">
                                     <thead>
                                         <tr>
