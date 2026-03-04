@@ -88,18 +88,82 @@ function RedirectPage() {
     }, [destination, countdown]);
 
     if (error) {
+        const isBlocked = error.includes('unsafe destination');
+        const isNotFound = error.includes('does not exist') || error.includes('invalid URL');
+        const heading = isBlocked ? 'Link blocked' : isNotFound ? 'Link not found' : 'Something went wrong';
+
         return (
             <section className="redirect-page">
                 <div className="redirect-card glass-card text-center">
                     <div className="redirect-brand">
                         dURL <small>//dev</small>
                     </div>
-                    <div className="redirect-icon redirect-icon--error">
-                        <i className="fas fa-link-slash" />
-                    </div>
-                    <h3 className="text-light mb-3">Link not found</h3>
-                    <p className="text-light mb-4">{error}</p>
-                    <a href="/" className="btn btn-outline-light">Go to Home</a>
+
+                    {isBlocked ? (
+                        <svg className="redirect-illustration" viewBox="0 0 120 120" aria-hidden="true">
+                            <defs>
+                                <filter id="err-glow">
+                                    <feGaussianBlur stdDeviation="3" />
+                                    <feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge>
+                                </filter>
+                            </defs>
+                            <path
+                                d="M60 18 L98 40 V84 L60 106 L22 84 V40 Z"
+                                fill="none" stroke="#FFCCCC" strokeWidth="2.5"
+                                filter="url(#err-glow)" opacity="0.85"
+                            />
+                            <line x1="60" y1="46" x2="60" y2="70" stroke="#FFCCCC" strokeWidth="3" strokeLinecap="round" />
+                            <circle cx="60" cy="82" r="3" fill="#FFCCCC" />
+                        </svg>
+                    ) : isNotFound ? (
+                        <svg className="redirect-illustration" viewBox="0 0 160 100" aria-hidden="true">
+                            <defs>
+                                <filter id="err-glow">
+                                    <feGaussianBlur stdDeviation="3" />
+                                    <feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge>
+                                </filter>
+                            </defs>
+                            <g filter="url(#err-glow)">
+                                <rect x="12" y="28" width="48" height="20" rx="10"
+                                      fill="none" stroke="#c95fff" strokeWidth="2.5"
+                                      transform="rotate(-30 36 38)" />
+                                <rect x="100" y="28" width="48" height="20" rx="10"
+                                      fill="none" stroke="#c95fff" strokeWidth="2.5"
+                                      transform="rotate(-30 124 38)" />
+                            </g>
+                            <g className="redirect-sparks">
+                                <circle cx="80" cy="42" r="3" fill="#00ffe0" />
+                                <circle cx="73" cy="54" r="2" fill="#FFCCCC" />
+                                <circle cx="87" cy="50" r="2" fill="#00ffe0" />
+                                <circle cx="76" cy="62" r="1.5" fill="#c95fff" />
+                                <circle cx="84" cy="60" r="1.5" fill="#FFCCCC" />
+                            </g>
+                        </svg>
+                    ) : (
+                        <svg className="redirect-illustration" viewBox="0 0 120 120" aria-hidden="true">
+                            <defs>
+                                <filter id="err-glow">
+                                    <feGaussianBlur stdDeviation="3" />
+                                    <feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge>
+                                </filter>
+                            </defs>
+                            <circle cx="60" cy="60" r="40" fill="none" stroke="#c95fff"
+                                    strokeWidth="2.5" strokeDasharray="8 6"
+                                    filter="url(#err-glow)" opacity="0.7" />
+                            <g filter="url(#err-glow)">
+                                <line x1="44" y1="44" x2="76" y2="76" stroke="#FFCCCC" strokeWidth="3" strokeLinecap="round" />
+                                <line x1="76" y1="44" x2="44" y2="76" stroke="#FFCCCC" strokeWidth="3" strokeLinecap="round" />
+                            </g>
+                        </svg>
+                    )}
+
+                    <h3 className="text-light mb-2">{heading}</h3>
+                    <p className="redirect-error-detail">{error}</p>
+                    <a href="/" className="btn btn-outline-light mt-2">Go to Home</a>
+
+                    <p className="redirect-powered">
+                        Powered by <a href="/">dURL</a> on Hedera
+                    </p>
                 </div>
             </section>
         );
