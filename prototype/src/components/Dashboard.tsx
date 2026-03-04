@@ -6,12 +6,12 @@ import QRModal from './utils/QRModal';
 import { getHashScanTxUrl, CONTRACT_ADDRESS, PROJECT_URL, ANALYTICS_URL } from 'utils/HederaConfig';
 import { safeGetItem } from 'utils/safeStorage';
 import { Link } from 'react-router-dom';
+import {
+    LINKS_PER_PAGE, LINK_FETCH_BATCH_SIZE, COPIED_FEEDBACK_MS,
+    STATS_TIMEOUT_MS, POLL_BASE_MS, POLL_MAX_MS, MAX_POLL_FAILURES,
+} from 'config';
 
 type SortOption = 'newest' | 'oldest' | 'most-visited' | 'least-visited';
-const LINKS_PER_PAGE = 25;
-const STATS_TIMEOUT_MS = 8_000;
-const POLL_BASE_MS = 5_000;
-const POLL_MAX_MS = 60_000;
 
 function fetchWithTimeout(url: string, parentSignal: AbortSignal, timeoutMs: number): Promise<Response> {
     const controller = new AbortController();
@@ -242,7 +242,7 @@ function Dashboard() {
             const shortIds: string[] = await contract.getUserLinks(address);
             if (signal.aborted) return;
 
-            const BATCH_SIZE = 5;
+            const BATCH_SIZE = LINK_FETCH_BATCH_SIZE;
             const formatted: { shortId: string; url: string }[] = [];
             for (let i = 0; i < shortIds.length; i += BATCH_SIZE) {
                 if (signal.aborted) return;
@@ -314,7 +314,7 @@ function Dashboard() {
                 if (abortController.signal.aborted) return;
                 pollFailures++;
                 pollDelay = Math.min(pollDelay * 2, POLL_MAX_MS);
-                if (pollFailures >= 3) {
+                if (pollFailures >= MAX_POLL_FAILURES) {
                     ShowToast('Visit stats are temporarily unavailable.', 'danger');
                     pollFailures = 0;
                 }
@@ -346,7 +346,7 @@ function Dashboard() {
                     next.delete(shortId);
                     return next;
                 });
-            }, 1500);
+            }, COPIED_FEEDBACK_MS);
         } catch {
             ShowToast('Failed to copy to clipboard', 'danger');
         }

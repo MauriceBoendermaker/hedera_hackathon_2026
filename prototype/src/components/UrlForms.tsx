@@ -5,6 +5,10 @@ import { ShowToast } from './utils/ShowToast';
 import { switchToHedera } from 'utils/NetworkSwitcher';
 import { getHashScanTxUrl, CONTRACT_ADDRESS, PROJECT_URL } from 'utils/HederaConfig';
 import { safeSetItem } from 'utils/safeStorage';
+import {
+    GAS_LIMIT, CUSTOM_SLUG_COST_HBAR, SLUG_DEBOUNCE_MS,
+    COPIED_FEEDBACK_MS, MAX_SLUG_LENGTH,
+} from 'config';
 
 export function UrlForms() {
     const [originalUrl, setOriginalUrl] = useState('');
@@ -21,7 +25,6 @@ export function UrlForms() {
     const [copied, setCopied] = useState(false);
 
     const hasWallet = typeof window !== 'undefined' && !!window.ethereum;
-    const MAX_SLUG_LENGTH = 32;
     const slugCheckTimer = useRef<ReturnType<typeof setTimeout>>(null);
     const slugCheckAbort = useRef<AbortController>(null);
 
@@ -54,7 +57,7 @@ export function UrlForms() {
             } finally {
                 if (!abort.signal.aborted) setCheckingSlug(false);
             }
-        }, 300);
+        }, SLUG_DEBOUNCE_MS);
 
         return () => {
             clearTimeout(slugCheckTimer.current!);
@@ -177,7 +180,7 @@ export function UrlForms() {
                 const tx = await contract.createCustomShortUrl(
                     customId,
                     originalUrl,
-                    { value: ethers.parseEther('1'), gasLimit: 400000 }
+                    { value: ethers.parseEther(CUSTOM_SLUG_COST_HBAR), gasLimit: GAS_LIMIT }
                 );
 
                 setStatus('Waiting for confirmation...');
@@ -199,7 +202,7 @@ export function UrlForms() {
 
                 const tx = await contract.generateShortUrl(
                     originalUrl,
-                    { gasLimit: 400000 }
+                    { gasLimit: GAS_LIMIT }
                 );
 
                 setStatus('Waiting for confirmation...');
@@ -425,7 +428,7 @@ export function UrlForms() {
                                         await navigator.clipboard.writeText(fullUrl);
                                         ShowToast('Copied to clipboard', 'success');
                                         setCopied(true);
-                                        setTimeout(() => setCopied(false), 1500);
+                                        setTimeout(() => setCopied(false), COPIED_FEEDBACK_MS);
                                     } catch {
                                         ShowToast('Failed to copy to clipboard', 'danger');
                                     }

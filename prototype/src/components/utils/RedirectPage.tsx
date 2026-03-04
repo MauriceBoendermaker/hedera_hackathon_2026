@@ -4,8 +4,7 @@ import { ethers } from 'ethers';
 import abi from '../../abi_hedera.json';
 import { CONTRACT_ADDRESS, HEDERA_RPC_URL, ANALYTICS_URL } from 'utils/HederaConfig';
 import { ShowToast } from './ShowToast';
-
-const COUNTDOWN_SECONDS = 3;
+import { COUNTDOWN_SECONDS } from 'config';
 
 function RedirectPage() {
     const { shortId } = useParams() as { shortId: string };

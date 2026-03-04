@@ -1,3 +1,5 @@
+import { TOAST_DANGER_DELAY_MS, TOAST_DEFAULT_DELAY_MS } from 'config';
+
 export function ShowToast(message: string, type: 'success' | 'danger') {
   const container = document.getElementById('toast-container');
   if (!container) return;
@@ -28,7 +30,7 @@ export function ShowToast(message: string, type: 'success' | 'danger') {
   container.appendChild(toast);
 
   // @ts-ignore
-  const bsToast = new bootstrap.Toast(toast, { delay: type === 'danger' ? 5000 : 3000 });
+  const bsToast = new bootstrap.Toast(toast, { delay: type === 'danger' ? TOAST_DANGER_DELAY_MS : TOAST_DEFAULT_DELAY_MS });
   bsToast.show();
 
   toast.addEventListener('hidden.bs.toast', () => toast.remove());
