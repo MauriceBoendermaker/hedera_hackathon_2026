@@ -319,6 +319,13 @@ app.post('/hcs/submit', async (req, res) => {
     return res.status(503).json({ error: 'HCS not configured' });
   }
 
+  const ip = getClientIp(req);
+
+  // 5 HCS submissions per IP per minute
+  if (isRateLimited(`hcs:${ip}`, 5, 60000)) {
+    return res.status(429).json({ error: 'Too many HCS submissions. Please wait before trying again.' });
+  }
+
   const { slug, urlHash, sender } = req.body;
 
   if (!slug || !urlHash || !sender) {
@@ -333,6 +340,11 @@ app.post('/hcs/submit', async (req, res) => {
   }
   if (typeof sender !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(sender)) {
     return res.status(400).json({ error: 'Invalid sender. Must be a valid Ethereum address.' });
+  }
+
+  // 10 HCS submissions per sender address per hour
+  if (isRateLimited(`hcs:${sender.toLowerCase()}`, 10, 3600000)) {
+    return res.status(429).json({ error: 'Too many HCS submissions from this wallet. Please wait before trying again.' });
   }
 
   const payload = JSON.stringify({
