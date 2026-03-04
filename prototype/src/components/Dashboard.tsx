@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ethers } from 'ethers';
 import abi from '../abi_hedera.json';
 import { ShowToast } from './utils/ShowToast';
@@ -9,6 +9,161 @@ import { Link } from 'react-router-dom';
 
 type SortOption = 'newest' | 'oldest' | 'most-visited' | 'least-visited';
 const LINKS_PER_PAGE = 25;
+
+interface LinkItemProps {
+    shortId: string;
+    url: string;
+    visits: number;
+    isCopied: boolean;
+    onCopy: (shortId: string) => void;
+    onShowQr: (shortUrl: string) => void;
+}
+
+const LinkRow = memo(function LinkRow({ shortId, url, visits, isCopied, onCopy, onShowQr }: LinkItemProps) {
+    const shortUrl = `${PROJECT_URL}/#/${shortId}`;
+    const txHash = safeGetItem(`txHash_${shortId}`);
+    return (
+        <tr>
+            <td>
+                <a
+                    href={shortUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-light text-decoration-none"
+                >
+                    <code>{shortId}</code>
+                    &nbsp;
+                    <i className="fas fa-external-link-alt small" />
+                </a>
+            </td>
+            <td style={{ wordBreak: 'break-all' }}>
+                <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-light text-decoration-none"
+                >
+                    {url}
+                    &nbsp;
+                    <i className="fas fa-external-link-alt small" />
+                </a>
+            </td>
+            <td className="text-center">
+                <div className="d-flex justify-content-center gap-2 flex-wrap">
+                    <button
+                        className={`btn btn-sm ${isCopied ? 'btn-success' : 'btn-outline-light'}`}
+                        onClick={() => onCopy(shortId)}
+                        title="Copy short link"
+                        aria-label="Copy short link"
+                    >
+                        <i className={isCopied ? 'fas fa-check' : 'fas fa-copy'} />
+                    </button>
+                    <button
+                        className="btn btn-sm btn-outline-light"
+                        title="Show QR"
+                        aria-label="Show QR code"
+                        onClick={() => onShowQr(shortUrl)}
+                    >
+                        <i className="fas fa-qrcode" />
+                    </button>
+                </div>
+            </td>
+            <td className="text-center">
+                {visits}
+            </td>
+            <td className="text-center">
+                {txHash ? (
+                    <div className="d-flex justify-content-center gap-2">
+                        <a
+                            href={getHashScanTxUrl(txHash)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-sm btn-outline-light"
+                            title="View on HashScan"
+                            aria-label="View transaction on HashScan"
+                        >
+                            <i className="fas fa-external-link-alt" />
+                        </a>
+                        <button
+                            className="btn btn-sm btn-outline-light"
+                            onClick={() => {
+                                navigator.clipboard.writeText(txHash);
+                                ShowToast('Tx hash copied!', 'success');
+                            }}
+                            title="Copy tx hash"
+                            aria-label="Copy transaction hash"
+                        >
+                            <i className="fas fa-hashtag" />
+                        </button>
+                    </div>
+                ) : (
+                    <span className="text-muted small">--</span>
+                )}
+            </td>
+        </tr>
+    );
+});
+
+const LinkCard = memo(function LinkCard({ shortId, url, visits, isCopied, onCopy, onShowQr }: LinkItemProps) {
+    const shortUrl = `${PROJECT_URL}/#/${shortId}`;
+    const txHash = safeGetItem(`txHash_${shortId}`);
+    return (
+        <div className="link-card">
+            <div className="link-card-header">
+                <a
+                    href={shortUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-decoration-none"
+                >
+                    <code>{shortId}</code>
+                    &nbsp;
+                    <i className="fas fa-external-link-alt small" />
+                </a>
+                <span className="link-card-visits">
+                    <i className="fas fa-chart-bar" /> {visits}
+                </span>
+            </div>
+            <p className="link-card-url">
+                <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-light text-decoration-none"
+                >
+                    {url}
+                </a>
+            </p>
+            <div className="link-card-actions">
+                <button
+                    className={`btn btn-sm ${isCopied ? 'btn-success' : 'btn-outline-light'}`}
+                    onClick={() => onCopy(shortId)}
+                    aria-label="Copy short link"
+                >
+                    <i className={isCopied ? 'fas fa-check' : 'fas fa-copy'} /> {isCopied ? 'Copied' : 'Copy'}
+                </button>
+                <button
+                    className="btn btn-sm btn-outline-light"
+                    aria-label="Show QR code"
+                    onClick={() => onShowQr(shortUrl)}
+                >
+                    <i className="fas fa-qrcode" /> QR
+                </button>
+                {txHash && (
+                    <a
+                        href={getHashScanTxUrl(txHash)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-sm btn-outline-light"
+                        aria-label="View transaction on HashScan"
+                    >
+                        <i className="fas fa-external-link-alt" /> HashScan
+                    </a>
+                )}
+            </div>
+        </div>
+    );
+});
 
 function Dashboard() {
     const [account, setAccount] = useState('');
@@ -149,7 +304,7 @@ function Dashboard() {
         };
     }, [loadLinks, retryCount]);
 
-    async function copyToClipboard(shortId: string) {
+    const handleCopy = useCallback(async (shortId: string) => {
         const fullUrl = `${PROJECT_URL}/#/${shortId}`;
         try {
             await navigator.clipboard.writeText(fullUrl);
@@ -165,7 +320,12 @@ function Dashboard() {
         } catch {
             ShowToast('Failed to copy to clipboard', 'danger');
         }
-    }
+    }, []);
+
+    const handleShowQr = useCallback((shortUrl: string) => {
+        setQrTarget(shortUrl);
+        setShowQrModal(true);
+    }, []);
 
     const filteredLinks = useMemo(() => {
         const q = searchQuery.toLowerCase().trim();
@@ -341,165 +501,34 @@ function Dashboard() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {paginatedLinks.map((link) => {
-                                            const shortUrl = `${PROJECT_URL}/#/${link.shortId}`;
-                                            return (
-                                                <tr key={link.shortId}>
-                                                    <td>
-                                                        <a
-                                                            href={shortUrl}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="text-light text-decoration-none"
-                                                        >
-                                                            <code>{link.shortId}</code>
-                                                            &nbsp;
-                                                            <i className="fas fa-external-link-alt small" />
-                                                        </a>
-                                                    </td>
-                                                    <td style={{ wordBreak: 'break-all' }}>
-                                                        <a
-                                                            href={link.url}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="text-light text-decoration-none"
-                                                        >
-                                                            {link.url}
-                                                            &nbsp;
-                                                            <i className="fas fa-external-link-alt small" />
-                                                        </a>
-                                                    </td>
-                                                    <td className="text-center">
-                                                        <div className="d-flex justify-content-center gap-2 flex-wrap">
-                                                            <button
-                                                                className={`btn btn-sm ${copiedIds.has(link.shortId) ? 'btn-success' : 'btn-outline-light'}`}
-                                                                onClick={() => copyToClipboard(link.shortId)}
-                                                                title="Copy short link"
-                                                                aria-label="Copy short link"
-                                                            >
-                                                                <i className={copiedIds.has(link.shortId) ? 'fas fa-check' : 'fas fa-copy'} />
-                                                            </button>
-                                                            <button
-                                                                className="btn btn-sm btn-outline-light"
-                                                                title="Show QR"
-                                                                aria-label="Show QR code"
-                                                                onClick={() => {
-                                                                    setQrTarget(shortUrl);
-                                                                    setShowQrModal(true);
-                                                                }}
-                                                            >
-                                                                <i className="fas fa-qrcode" />
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                    <td className="text-center">
-                                                        {visitCounts[link.shortId] || 0}
-                                                    </td>
-                                                    <td className="text-center">
-                                                        {(() => {
-                                                            const txHash = safeGetItem(`txHash_${link.shortId}`);
-                                                            if (txHash) {
-                                                                return (
-                                                                    <div className="d-flex justify-content-center gap-2">
-                                                                        <a
-                                                                            href={getHashScanTxUrl(txHash)}
-                                                                            target="_blank"
-                                                                            rel="noopener noreferrer"
-                                                                            className="btn btn-sm btn-outline-light"
-                                                                            title="View on HashScan"
-                                                                            aria-label="View transaction on HashScan"
-                                                                        >
-                                                                            <i className="fas fa-external-link-alt" />
-                                                                        </a>
-                                                                        <button
-                                                                            className="btn btn-sm btn-outline-light"
-                                                                            onClick={() => {
-                                                                                navigator.clipboard.writeText(txHash);
-                                                                                ShowToast('Tx hash copied!', 'success');
-                                                                            }}
-                                                                            title="Copy tx hash"
-                                                                            aria-label="Copy transaction hash"
-                                                                        >
-                                                                            <i className="fas fa-hashtag" />
-                                                                        </button>
-                                                                    </div>
-                                                                );
-                                                            }
-                                                            return <span className="text-muted small">--</span>;
-                                                        })()}
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
+                                        {paginatedLinks.map((link) => (
+                                            <LinkRow
+                                                key={link.shortId}
+                                                shortId={link.shortId}
+                                                url={link.url}
+                                                visits={visitCounts[link.shortId] || 0}
+                                                isCopied={copiedIds.has(link.shortId)}
+                                                onCopy={handleCopy}
+                                                onShowQr={handleShowQr}
+                                            />
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>
 
                             {/* Mobile cards */}
                             <div className="link-cards d-md-none">
-                                {paginatedLinks.map((link) => {
-                                    const shortUrl = `${PROJECT_URL}/#/${link.shortId}`;
-                                    const txHash = safeGetItem(`txHash_${link.shortId}`);
-                                    return (
-                                        <div key={link.shortId} className="link-card">
-                                            <div className="link-card-header">
-                                                <a
-                                                    href={shortUrl}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="text-decoration-none"
-                                                >
-                                                    <code>{link.shortId}</code>
-                                                    &nbsp;
-                                                    <i className="fas fa-external-link-alt small" />
-                                                </a>
-                                                <span className="link-card-visits">
-                                                    <i className="fas fa-chart-bar" /> {visitCounts[link.shortId] || 0}
-                                                </span>
-                                            </div>
-                                            <p className="link-card-url">
-                                                <a
-                                                    href={link.url}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="text-light text-decoration-none"
-                                                >
-                                                    {link.url}
-                                                </a>
-                                            </p>
-                                            <div className="link-card-actions">
-                                                <button
-                                                    className={`btn btn-sm ${copiedIds.has(link.shortId) ? 'btn-success' : 'btn-outline-light'}`}
-                                                    onClick={() => copyToClipboard(link.shortId)}
-                                                    aria-label="Copy short link"
-                                                >
-                                                    <i className={copiedIds.has(link.shortId) ? 'fas fa-check' : 'fas fa-copy'} /> {copiedIds.has(link.shortId) ? 'Copied' : 'Copy'}
-                                                </button>
-                                                <button
-                                                    className="btn btn-sm btn-outline-light"
-                                                    aria-label="Show QR code"
-                                                    onClick={() => {
-                                                        setQrTarget(shortUrl);
-                                                        setShowQrModal(true);
-                                                    }}
-                                                >
-                                                    <i className="fas fa-qrcode" /> QR
-                                                </button>
-                                                {txHash && (
-                                                    <a
-                                                        href={getHashScanTxUrl(txHash)}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="btn btn-sm btn-outline-light"
-                                                        aria-label="View transaction on HashScan"
-                                                    >
-                                                        <i className="fas fa-external-link-alt" /> HashScan
-                                                    </a>
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                                {paginatedLinks.map((link) => (
+                                    <LinkCard
+                                        key={link.shortId}
+                                        shortId={link.shortId}
+                                        url={link.url}
+                                        visits={visitCounts[link.shortId] || 0}
+                                        isCopied={copiedIds.has(link.shortId)}
+                                        onCopy={handleCopy}
+                                        onShowQr={handleShowQr}
+                                    />
+                                ))}
                             </div>
 
                             {totalPages > 1 && (
