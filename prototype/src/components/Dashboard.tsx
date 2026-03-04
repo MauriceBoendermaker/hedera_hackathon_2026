@@ -9,6 +9,20 @@ import { Link } from 'react-router-dom';
 
 type SortOption = 'newest' | 'oldest' | 'most-visited' | 'least-visited';
 const LINKS_PER_PAGE = 25;
+const STATS_TIMEOUT_MS = 8_000;
+const POLL_BASE_MS = 5_000;
+const POLL_MAX_MS = 60_000;
+
+function fetchWithTimeout(url: string, parentSignal: AbortSignal, timeoutMs: number): Promise<Response> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const onParentAbort = () => controller.abort();
+    parentSignal.addEventListener('abort', onParentAbort);
+    return fetch(url, { signal: controller.signal }).finally(() => {
+        clearTimeout(timer);
+        parentSignal.removeEventListener('abort', onParentAbort);
+    });
+}
 
 interface LinkItemProps {
     shortId: string;
@@ -184,7 +198,7 @@ function Dashboard() {
         if (slugs.length === 0) return;
         try {
             const params = new URLSearchParams({ slugs: slugs.join(',') });
-            const res = await fetch(`${ANALYTICS_URL}/stats?${params}`, { signal });
+            const res = await fetchWithTimeout(`${ANALYTICS_URL}/stats?${params}`, signal, STATS_TIMEOUT_MS);
             if (res.status === 429) {
                 ShowToast('Rate limit reached — stats requests are temporarily throttled.', 'danger');
                 return;
@@ -193,7 +207,7 @@ function Dashboard() {
             const stats = await res.json();
             if (!signal.aborted) setVisitCounts(stats);
         } catch (e) {
-            if (!(e instanceof DOMException)) {
+            if (!signal.aborted) {
                 ShowToast('Could not load visit stats. Analytics server may be down.', 'danger');
             }
         }
@@ -264,42 +278,58 @@ function Dashboard() {
         loadLinks(abortController.signal);
 
         let pollFailures = 0;
+        let pollDelay = POLL_BASE_MS;
+        let pollTimer: ReturnType<typeof setTimeout>;
         let paused = document.hidden;
 
         const handleVisibility = () => { paused = document.hidden; };
         document.addEventListener('visibilitychange', handleVisibility);
 
-        const statsInterval = setInterval(async () => {
-            if (paused || abortController.signal.aborted) return;
+        async function pollStats() {
+            if (abortController.signal.aborted) return;
+
             const currentSlugs = slugsRef.current;
-            if (currentSlugs.length === 0) return;
+            if (paused || currentSlugs.length === 0) {
+                pollTimer = setTimeout(pollStats, pollDelay);
+                return;
+            }
+
             try {
                 const params = new URLSearchParams({ slugs: currentSlugs.join(',') });
-                const res = await fetch(`${ANALYTICS_URL}/stats?${params}`, { signal: abortController.signal });
+                const res = await fetchWithTimeout(`${ANALYTICS_URL}/stats?${params}`, abortController.signal, STATS_TIMEOUT_MS);
                 if (res.status === 429) {
                     ShowToast('Rate limit reached — stats requests are temporarily throttled.', 'danger');
-                    return;
-                }
-                if (!res.ok) throw new Error(`Stats request failed (${res.status})`);
-                const stats = await res.json();
-                if (!abortController.signal.aborted) {
-                    setVisitCounts(stats);
-                    pollFailures = 0;
-                }
-            } catch (e) {
-                if (!abortController.signal.aborted && !(e instanceof DOMException)) {
-                    pollFailures++;
-                    if (pollFailures >= 3) {
-                        ShowToast('Visit stats are temporarily unavailable.', 'danger');
+                    pollDelay = Math.min(pollDelay * 2, POLL_MAX_MS);
+                } else if (!res.ok) {
+                    throw new Error(`Stats request failed (${res.status})`);
+                } else {
+                    const stats = await res.json();
+                    if (!abortController.signal.aborted) {
+                        setVisitCounts(stats);
                         pollFailures = 0;
+                        pollDelay = POLL_BASE_MS;
                     }
                 }
+            } catch (e) {
+                if (abortController.signal.aborted) return;
+                pollFailures++;
+                pollDelay = Math.min(pollDelay * 2, POLL_MAX_MS);
+                if (pollFailures >= 3) {
+                    ShowToast('Visit stats are temporarily unavailable.', 'danger');
+                    pollFailures = 0;
+                }
             }
-        }, 5000);
+
+            if (!abortController.signal.aborted) {
+                pollTimer = setTimeout(pollStats, pollDelay);
+            }
+        }
+
+        pollTimer = setTimeout(pollStats, POLL_BASE_MS);
 
         return () => {
             abortController.abort();
-            clearInterval(statsInterval);
+            clearTimeout(pollTimer);
             document.removeEventListener('visibilitychange', handleVisibility);
         };
     }, [loadLinks, retryCount]);
