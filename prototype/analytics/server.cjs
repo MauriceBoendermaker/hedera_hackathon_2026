@@ -292,14 +292,14 @@ app.post('/track', (req, res) => {
 
     // ── Filter bots (silent 200 — don't break redirects, just skip logging) ──
     if (isBot(cleanUA)) {
-        return res.sendStatus(200);
+        return res.status(200).json({ ok: true });
     }
 
     const ip = getClientIp(req);
 
     // ── Deduplicate (same IP + shortId within 10 min → skip logging) ──
     if (isDuplicateVisit(ip, shortId)) {
-        return res.sendStatus(200);
+        return res.status(200).json({ ok: true });
     }
 
     // 1 track per shortId per IP per minute
@@ -309,10 +309,10 @@ app.post('/track', (req, res) => {
 
     try {
         insertVisit.run(shortId, ts, cleanReferrer, cleanUA, ip);
-        res.sendStatus(200);
+        res.status(200).json({ ok: true });
     } catch (err) {
         log.error({ err, shortId, reqId: req.id }, 'Failed to insert visit');
-        res.sendStatus(500);
+        res.status(500).json({ error: 'Failed to record visit' });
     }
 });
 
