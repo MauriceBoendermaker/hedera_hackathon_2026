@@ -39,6 +39,7 @@ db.exec(`
   )
 `);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_visits_shortId ON visits (shortId)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_visits_timestamp ON visits (timestamp)`);
 
 const insertVisit = db.prepare(
   'INSERT INTO visits (shortId, timestamp, referrer, userAgent, ip) VALUES (?, ?, ?, ?, ?)'
@@ -46,6 +47,45 @@ const insertVisit = db.prepare(
 const countByShortId = db.prepare(
   'SELECT shortId, COUNT(*) AS count FROM visits GROUP BY shortId'
 );
+
+// ── Data retention / cleanup ──────────────────────────────────────────
+const RETENTION_DAYS = Math.max(1, parseInt(process.env.RETENTION_DAYS, 10) || 90);
+const RETENTION_MS = RETENTION_DAYS * 24 * 60 * 60 * 1000;
+const PURGE_INTERVAL_MS = 60 * 60 * 1000; // run every hour
+const PURGE_BATCH_SIZE = 5000; // delete in batches to avoid long locks
+
+const purgeOldVisits = db.prepare(
+  'DELETE FROM visits WHERE id IN (SELECT id FROM visits WHERE timestamp < ? LIMIT ?)'
+);
+
+let lastPurgeInfo = { at: null, deleted: 0 };
+
+function runRetentionPurge() {
+  const cutoff = Date.now() - RETENTION_MS;
+  let totalDeleted = 0;
+  try {
+    // Delete in batches to keep WAL churn and lock time small
+    let deleted;
+    do {
+      deleted = purgeOldVisits.run(cutoff, PURGE_BATCH_SIZE).changes;
+      totalDeleted += deleted;
+    } while (deleted === PURGE_BATCH_SIZE);
+
+    lastPurgeInfo = { at: new Date().toISOString(), deleted: totalDeleted };
+    if (totalDeleted > 0) {
+      log.info({ deleted: totalDeleted, retentionDays: RETENTION_DAYS }, 'Retention purge completed');
+    }
+  } catch (err) {
+    log.error({ err }, 'Retention purge failed');
+  }
+}
+
+// Run once at startup (deferred so server starts quickly), then hourly
+setTimeout(runRetentionPurge, 30_000);
+const purgeTimer = setInterval(runRetentionPurge, PURGE_INTERVAL_MS);
+purgeTimer.unref(); // don't prevent graceful shutdown
+
+log.info({ retentionDays: RETENTION_DAYS }, 'Data retention policy active');
 
 // ── Rate-limiting helpers ──────────────────────────────────────────────
 const rateBuckets = new Map();   // key → { count, resetAt }
@@ -178,6 +218,10 @@ app.get('/health', (req, res) => {
         uptime: Math.floor(process.uptime()),
         db: dbStatus,
         hcs: hederaClient ? 'configured' : 'disabled',
+        retention: {
+            days: RETENTION_DAYS,
+            lastPurge: lastPurgeInfo,
+        },
     });
 });
 
