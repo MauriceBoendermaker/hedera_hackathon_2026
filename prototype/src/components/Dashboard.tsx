@@ -23,6 +23,7 @@ function Dashboard() {
     const [retryCount, setRetryCount] = useState(0);
     const slugsRef = useRef<string[]>([]);
     const [copiedIds, setCopiedIds] = useState<Set<string>>(new Set());
+    const [showQrModal, setShowQrModal] = useState(false);
 
     async function fetchStats(slugs: string[], signal: AbortSignal) {
         if (slugs.length === 0) return;
@@ -164,17 +165,6 @@ function Dashboard() {
         } catch {
             ShowToast('Failed to copy to clipboard', 'danger');
         }
-    }
-
-    function downloadDashboardQR() {
-        const canvas = document.querySelector('#dashboardQrModal canvas') as HTMLCanvasElement;
-        if (!canvas || !qrTarget) return;
-
-        const url = canvas.toDataURL('image/png');
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${qrTarget.split('/').pop()}.png`;
-        a.click();
     }
 
     const filteredLinks = useMemo(() => {
@@ -395,10 +385,7 @@ function Dashboard() {
                                                                 aria-label="Show QR code"
                                                                 onClick={() => {
                                                                     setQrTarget(shortUrl);
-                                                                    setTimeout(() => {
-                                                                        const modal = new (window as any).bootstrap.Modal(document.getElementById('dashboardQrModal'));
-                                                                        modal.show();
-                                                                    }, 0);
+                                                                    setShowQrModal(true);
                                                                 }}
                                                             >
                                                                 <i className="fas fa-qrcode" />
@@ -493,10 +480,7 @@ function Dashboard() {
                                                     aria-label="Show QR code"
                                                     onClick={() => {
                                                         setQrTarget(shortUrl);
-                                                        setTimeout(() => {
-                                                            const modal = new (window as any).bootstrap.Modal(document.getElementById('dashboardQrModal'));
-                                                            modal.show();
-                                                        }, 0);
+                                                        setShowQrModal(true);
                                                     }}
                                                 >
                                                     <i className="fas fa-qrcode" /> QR
@@ -548,13 +532,11 @@ function Dashboard() {
                 </div>
             </div>
 
-            {qrTarget && (
-                <QRModal
-                    id="dashboardQrModal"
-                    qrValue={qrTarget}
-                    onDownload={downloadDashboardQR}
-                />
-            )}
+            <QRModal
+                qrValue={qrTarget ?? ''}
+                show={showQrModal && !!qrTarget}
+                onHide={() => setShowQrModal(false)}
+            />
         </section>
     );
 }
