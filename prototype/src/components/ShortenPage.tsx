@@ -1,8 +1,9 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import MouseDots from './misc/MouseDots';
 import { QRCodeCanvas } from 'qrcode.react';
 import { UrlForms } from './UrlForms';
 import { PROJECT_URL } from 'utils/HederaConfig';
+import { useTiltEffect } from 'hooks/useTiltEffect';
 
 declare global {
     interface Window {
@@ -13,8 +14,9 @@ declare global {
 function ShortenPage() {
     const qrRef = useRef<HTMLCanvasElement | null>(null);
     const [qrUrl, setQrUrl] = useState('');
-    const [modalMouse, setModalMouse] = useState({ x: 0, y: 0 });
     const cardRef = useRef<HTMLDivElement | null>(null);
+
+    useTiltEffect(cardRef);
 
     function downloadQR() {
         const canvas = qrRef.current;
@@ -25,53 +27,6 @@ function ShortenPage() {
         a.download = 'qr-code.png';
         a.click();
     }
-
-    useEffect(() => {
-        const card = cardRef.current;
-        if (!card) return;
-
-        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
-        function handleDocumentMouseMove(e: MouseEvent) {
-            const card = cardRef.current;
-            if (!card || !card.offsetParent) return; // skip when modal is hidden
-
-            const { innerWidth, innerHeight } = window;
-            const x = e.clientX / innerWidth - 0.5;
-            const y = e.clientY / innerHeight - 0.5;
-
-            const rotateX = y * -10;
-            const rotateY = x * 10;
-
-            card.style.transform = `
-                perspective(1000px)
-                rotateX(${rotateX}deg)
-                rotateY(${rotateY}deg)
-                scale(1.03)
-            `;
-
-            const glare = card.querySelector('.glare') as HTMLDivElement | null;
-            if (glare) {
-                const glareX = e.clientX / innerWidth * 100;
-                const glareY = e.clientY / innerHeight * 100;
-                glare.style.background = `radial-gradient(circle at ${glareX}% ${glareY}%, rgba(255,255,255,0.25), transparent 60%)`;
-            }
-        }
-
-        function resetTilt() {
-            if (card) {
-                card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)';
-            }
-        }
-
-        document.addEventListener('mousemove', handleDocumentMouseMove);
-        document.addEventListener('mouseleave', resetTilt);
-
-        return () => {
-            document.removeEventListener('mousemove', handleDocumentMouseMove);
-            document.removeEventListener('mouseleave', resetTilt);
-        };
-    }, []);
 
     return (
         <>
@@ -105,9 +60,7 @@ function ShortenPage() {
                         ref={cardRef}
                         className="glare modal-content text-center text-white border-0 qr-card"
                         style={{
-                            transform: `rotateX(${modalMouse.y * 10}deg) rotateY(${modalMouse.x * 15}deg)`,
-                            background: `radial-gradient(circle at ${50 + modalMouse.x * 50
-                                }% ${50 + modalMouse.y * 20}%, rgba(58,0,128,0.35), #111)`,
+                            background: 'radial-gradient(circle at center, rgba(58,0,128,0.35), #111)',
                             transition: 'transform 0.1s ease-out, background 0.3s ease',
                             backdropFilter: 'blur(12px)',
                             borderRadius: '1.5rem',

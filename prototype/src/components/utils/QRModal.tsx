@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
+import { useTiltEffect } from 'hooks/useTiltEffect';
 
 interface QRModalProps {
     qrValue: string;
@@ -28,43 +29,7 @@ function QRModal({ qrValue, show, onHide }: QRModalProps) {
         };
     }, [show, onHide]);
 
-    useEffect(() => {
-        const card = cardRef.current;
-        if (!card || !show) return;
-
-        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
-        function handleMouseMove(e: MouseEvent) {
-            if (!card) return;
-            const { innerWidth, innerHeight } = window;
-            const x = e.clientX / innerWidth - 0.5;
-            const y = e.clientY / innerHeight - 0.5;
-            const rotateX = y * -10;
-            const rotateY = x * 10;
-            card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.03)`;
-
-            const glare = glareRef.current;
-            if (glare) {
-                const glareX = e.clientX / innerWidth * 100;
-                const glareY = e.clientY / innerHeight * 100;
-                glare.style.background = `radial-gradient(circle at ${glareX}% ${glareY}%, rgba(255,255,255,0.02), transparent 60%)`;
-            }
-        }
-
-        function reset() {
-            if (card) {
-                card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)';
-            }
-        }
-
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseleave', reset);
-
-        return () => {
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseleave', reset);
-        };
-    }, [show]);
+    useTiltEffect(cardRef, glareRef, show);
 
     const handleDownload = useCallback(() => {
         const canvas = canvasWrapperRef.current?.querySelector('canvas');
