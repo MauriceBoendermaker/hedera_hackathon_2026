@@ -22,6 +22,13 @@ const {
 const app = express();
 const PORT = process.env.PORT || 5001;
 
+// ── Tuning constants (all overridable via env) ────────────────────────
+const DEDUP_WINDOW_MS    = parseInt(process.env.DEDUP_WINDOW_MS, 10)    || 10 * 60 * 1000; // 10 min
+const TIMESTAMP_DRIFT_MS = parseInt(process.env.TIMESTAMP_DRIFT_MS, 10) || 5 * 60 * 1000;  // 5 min
+const HCS_TIMEOUT_MS     = parseInt(process.env.HCS_TIMEOUT_MS, 10)     || 10_000;          // 10 s
+const MAX_MAP_ENTRIES    = parseInt(process.env.MAX_MAP_ENTRIES, 10)     || 100_000;         // 100 k
+const BODY_SIZE_LIMIT    = process.env.BODY_SIZE_LIMIT                   || '10kb';
+
 // ── SQLite setup ─────────────────────────────────────────────────────
 const DB_PATH = path.join(__dirname, 'analytics.db');
 const db = new Database(DB_PATH);
@@ -90,7 +97,6 @@ log.info({ retentionDays: RETENTION_DAYS }, 'Data retention policy active');
 // ── Rate-limiting helpers ──────────────────────────────────────────────
 const rateBuckets = new Map();   // key → { count, resetAt }
 const CLEANUP_INTERVAL = 60000;  // purge stale entries every 60 s
-const MAX_MAP_ENTRIES = 100_000; // hard cap to prevent unbounded memory growth
 
 /** Evict oldest entries when a Map exceeds MAX_MAP_ENTRIES. */
 function enforceCap(map) {
@@ -150,7 +156,7 @@ app.use((req, res, next) => {
     next();
 });
 
-app.use(bodyParser.json({ limit: '10kb' }));
+app.use(bodyParser.json({ limit: BODY_SIZE_LIMIT }));
 
 // ── Security headers ────────────────────────────────────────────────
 app.use((req, res, next) => {
@@ -229,8 +235,6 @@ app.get('/health', (req, res) => {
 const VALID_SHORT_ID = /^[a-zA-Z0-9_-]{1,32}$/;
 const MAX_REFERRER_LEN = 2048;
 const MAX_UA_LEN = 512;
-// Accept timestamps within ±5 minutes of server time
-const TIMESTAMP_DRIFT_MS = 5 * 60 * 1000;
 
 function sanitizeString(val, maxLen) {
     if (typeof val !== 'string') return '';
@@ -245,9 +249,8 @@ function isBot(ua) {
     return BOT_UA_PATTERN.test(ua);
 }
 
-// ── Visit deduplication (IP + shortId, 10-min window) ──────────────────
+// ── Visit deduplication (IP + shortId) ──────────────────────────────────
 const recentVisits = new Map();   // key → expireAt
-const DEDUP_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 
 // Piggy-back on the existing cleanup interval for stale dedup entries
 setInterval(() => {
@@ -402,8 +405,6 @@ app.post('/hcs/submit', async (req, res) => {
   if (Buffer.byteLength(payload, 'utf8') > 1024) {
     return res.status(400).json({ error: 'Payload exceeds 1024-byte HCS limit' });
   }
-
-  const HCS_TIMEOUT_MS = 10000;
 
   try {
     const submitTx = await Promise.race([
