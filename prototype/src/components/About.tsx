@@ -1,4 +1,5 @@
 import React from 'react';
+import { FeedbackStats } from './utils/FeedbackStats';
 
 function About() {
     return (
@@ -19,6 +20,9 @@ function About() {
                             You retain complete control over your links. MetaMask is required to interact with the system.
                             Custom links cost 1 HBAR, while random links are free.
                         </p>
+                    </div>
+                    <div className="col-md-8">
+                        <FeedbackStats />
                     </div>
                 </div>
             </div>

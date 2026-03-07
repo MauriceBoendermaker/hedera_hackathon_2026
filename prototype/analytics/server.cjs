@@ -48,12 +48,55 @@ db.exec(`
 db.exec(`CREATE INDEX IF NOT EXISTS idx_visits_shortId ON visits (shortId)`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_visits_timestamp ON visits (timestamp)`);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS feedback (
+    id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    rating    INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
+    comment   TEXT    NOT NULL DEFAULT '',
+    context   TEXT    NOT NULL DEFAULT '',
+    timestamp INTEGER NOT NULL,
+    ip        TEXT    NOT NULL DEFAULT '',
+    wallet    TEXT    NOT NULL DEFAULT '',
+    survey    TEXT    NOT NULL DEFAULT ''
+  )
+`);
+
+// Migrations: add columns to existing databases
+try { db.exec(`ALTER TABLE feedback ADD COLUMN wallet TEXT NOT NULL DEFAULT ''`); } catch { /* already exists */ }
+try { db.exec(`ALTER TABLE feedback ADD COLUMN survey TEXT NOT NULL DEFAULT ''`); } catch { /* already exists */ }
+db.exec(`CREATE INDEX IF NOT EXISTS idx_feedback_timestamp ON feedback (timestamp)`);
+
 const insertVisit = db.prepare(
   'INSERT INTO visits (shortId, timestamp, referrer, userAgent, ip) VALUES (?, ?, ?, ?, ?)'
 );
 const countByShortId = db.prepare(
   'SELECT shortId, COUNT(*) AS count FROM visits GROUP BY shortId'
 );
+
+const insertFeedback = db.prepare(
+  'INSERT INTO feedback (rating, comment, context, timestamp, ip, wallet, survey) VALUES (?, ?, ?, ?, ?, ?, ?)'
+);
+const countFeedbackByWalletToday = db.prepare(
+  'SELECT COUNT(*) AS count FROM feedback WHERE wallet = ? AND timestamp > ?'
+);
+const countFeedbackByIpToday = db.prepare(
+  'SELECT COUNT(*) AS count FROM feedback WHERE ip = ? AND wallet = \'\' AND timestamp > ?'
+);
+const feedbackAggregateStats = db.prepare(`
+  SELECT
+    COUNT(*)       AS total,
+    AVG(rating)    AS avg,
+    SUM(CASE WHEN rating = 1 THEN 1 ELSE 0 END) AS r1,
+    SUM(CASE WHEN rating = 2 THEN 1 ELSE 0 END) AS r2,
+    SUM(CASE WHEN rating = 3 THEN 1 ELSE 0 END) AS r3,
+    SUM(CASE WHEN rating = 4 THEN 1 ELSE 0 END) AS r4,
+    SUM(CASE WHEN rating = 5 THEN 1 ELSE 0 END) AS r5
+  FROM feedback
+`);
+const feedbackByContext = db.prepare(`
+  SELECT context, COUNT(*) AS total, AVG(rating) AS avg
+  FROM feedback GROUP BY context
+`);
 
 // ── Data retention / cleanup ──────────────────────────────────────────
 const RETENTION_DAYS = Math.max(1, parseInt(process.env.RETENTION_DAYS, 10) || 90);
@@ -238,8 +281,10 @@ const MAX_UA_LEN = 512;
 
 function sanitizeString(val, maxLen) {
     if (typeof val !== 'string') return '';
-    // Strip control characters (keep printable ASCII + common UTF-8)
-    return val.replace(/[\x00-\x1F\x7F]/g, '').slice(0, maxLen);
+    return val
+        .replace(/[\x00-\x1F\x7F]/g, '')  // strip control characters
+        .replace(/[<>"'&]/g, '')            // strip HTML-sensitive characters
+        .slice(0, maxLen);
 }
 
 // ── Bot detection ──────────────────────────────────────────────────────
@@ -435,6 +480,124 @@ app.post('/hcs/submit', async (req, res) => {
       return res.status(504).json({ error: 'HCS submission timed out' });
     }
     return res.status(500).json({ error: 'HCS submission failed' });
+  }
+});
+
+// ── Feedback endpoints ────────────────────────────────────────────────
+const VALID_FEEDBACK_CONTEXTS = new Set(['creation', 'redirect', 'footer']);
+const MAX_COMMENT_LEN = 500;
+
+const VALID_WALLET = /^0x[a-fA-F0-9]{40}$/;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const MAX_SURVEY_KEYS = 10;
+const MAX_SURVEY_VALUE_LEN = 100;
+
+function sanitizeSurvey(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return '';
+  const clean = {};
+  let count = 0;
+  for (const [key, val] of Object.entries(raw)) {
+    if (count >= MAX_SURVEY_KEYS) break;
+    if (typeof key !== 'string' || typeof val !== 'string') continue;
+    const k = sanitizeString(key, MAX_SURVEY_VALUE_LEN);
+    const v = sanitizeString(val, MAX_SURVEY_VALUE_LEN);
+    if (k && v) { clean[k] = v; count++; }
+  }
+  return count > 0 ? JSON.stringify(clean) : '';
+}
+
+app.post('/feedback', (req, res) => {
+  const ip = getClientIp(req);
+  const { rating, comment, context, wallet, survey } = req.body;
+
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+    return res.status(400).json({ error: 'Rating must be an integer between 1 and 5.' });
+  }
+  if (!context || !VALID_FEEDBACK_CONTEXTS.has(context)) {
+    return res.status(400).json({ error: 'Context must be one of: creation, redirect, footer.' });
+  }
+
+  const cleanWallet = (typeof wallet === 'string' && VALID_WALLET.test(wallet))
+    ? wallet.toLowerCase()
+    : '';
+
+  const dayAgo = Date.now() - DAY_MS;
+
+  if (cleanWallet) {
+    // Wallet users: 1 feedback per wallet per day
+    const { count } = countFeedbackByWalletToday.get(cleanWallet, dayAgo);
+    if (count >= 1) {
+      return res.status(429).json({ error: 'You have already submitted feedback today. Please try again tomorrow.' });
+    }
+  } else {
+    // Non-wallet users: 3 feedback per IP per day
+    const { count } = countFeedbackByIpToday.get(ip, dayAgo);
+    if (count >= 3) {
+      return res.status(429).json({ error: 'Feedback limit reached for today. Please try again tomorrow.' });
+    }
+  }
+
+  const cleanComment = sanitizeString(comment || '', MAX_COMMENT_LEN);
+  const cleanSurvey = sanitizeSurvey(survey);
+
+  try {
+    insertFeedback.run(rating, cleanComment, context, Date.now(), ip, cleanWallet, cleanSurvey);
+    res.status(200).json({ ok: true });
+  } catch (err) {
+    log.error({ err, reqId: req.id }, 'Failed to insert feedback');
+    res.status(500).json({ error: 'Failed to record feedback' });
+  }
+});
+
+const feedbackSurveyRows = db.prepare(
+  `SELECT survey FROM feedback WHERE survey != ''`
+);
+
+app.get('/feedback/stats', (req, res) => {
+  const ip = getClientIp(req);
+
+  // 30 requests per IP per minute (same as /stats)
+  if (isRateLimited(`fbstats:${ip}`, 30, 60000)) {
+    return res.status(429).json({ error: 'Too many requests. Please wait before refreshing.' });
+  }
+
+  try {
+    const agg = feedbackAggregateStats.get();
+    const byCtx = feedbackByContext.all();
+
+    const total = agg.total || 0;
+    const averageRating = total > 0 ? Math.round(agg.avg * 100) / 100 : 0;
+    const distribution = {
+      1: agg.r1 || 0,
+      2: agg.r2 || 0,
+      3: agg.r3 || 0,
+      4: agg.r4 || 0,
+      5: agg.r5 || 0,
+    };
+
+    const byContext = {};
+    for (const row of byCtx) {
+      byContext[row.context] = { total: row.total, averageRating: Math.round(row.avg * 100) / 100 };
+    }
+
+    // Survey breakdown: count per answer per question key
+    const surveyBreakdown = {};
+    const surveyRows = feedbackSurveyRows.all();
+    for (const row of surveyRows) {
+      try {
+        const parsed = JSON.parse(row.survey);
+        for (const [question, answer] of Object.entries(parsed)) {
+          if (!surveyBreakdown[question]) surveyBreakdown[question] = {};
+          surveyBreakdown[question][answer] = (surveyBreakdown[question][answer] || 0) + 1;
+        }
+      } catch { /* skip malformed JSON */ }
+    }
+
+    res.json({ total, averageRating, distribution, byContext, surveyBreakdown });
+  } catch (err) {
+    log.error({ err, reqId: req.id }, 'Failed to query feedback stats');
+    res.status(500).json({ error: 'Failed to read feedback stats' });
   }
 });
 

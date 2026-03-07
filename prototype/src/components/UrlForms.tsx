@@ -9,6 +9,7 @@ import {
     GAS_LIMIT, CUSTOM_SLUG_COST_HBAR, SLUG_DEBOUNCE_MS,
     COPIED_FEEDBACK_MS, MAX_SLUG_LENGTH,
 } from 'config';
+import { FeedbackWidget } from './utils/FeedbackWidget';
 
 export function UrlForms() {
     const [originalUrl, setOriginalUrl] = useState('');
@@ -497,6 +498,11 @@ export function UrlForms() {
                         >
                             Create another link
                         </button>
+
+                        <div className="feedback-prompt mt-3">
+                            <p className="text-white-50 small mb-2">How was your experience creating this link?</p>
+                            <FeedbackWidget context="creation" compact />
+                        </div>
                     </div>
                 );
             })()}

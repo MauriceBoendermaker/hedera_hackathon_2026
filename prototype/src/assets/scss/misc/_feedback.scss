@@ -1,0 +1,248 @@
+// ── Feedback Widget ──────────────────────────────────────────────────
+.feedback-widget {
+  text-align: center;
+
+  &--done {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: $secondary-color;
+    font-size: 0.9rem;
+    padding: 0.5rem 0;
+
+    i { font-size: 1.1rem; }
+  }
+}
+
+.feedback-widget__stars {
+  display: flex;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.feedback-widget__star {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.5rem;
+  color: rgba(255, 255, 255, 0.3);
+  transition: color 0.15s ease, transform 0.15s ease;
+  padding: 0.15rem 0.25rem;
+
+  &:hover {
+    transform: scale(1.2);
+  }
+
+  &--active {
+    color: $secondary-color;
+  }
+}
+
+.feedback-widget--compact .feedback-widget__star {
+  font-size: 1.25rem;
+}
+
+.feedback-widget__comment {
+  font-size: 0.85rem;
+  resize: none;
+}
+
+.feedback-widget__submit {
+  min-width: 80px;
+}
+
+// ── Feedback Prompt (post-creation) ─────────────────────────────────
+.feedback-prompt {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 0.75rem;
+  animation: feedbackFadeIn 0.4s ease-out 0.5s both;
+}
+
+@keyframes feedbackFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// ── Footer Feedback Button ──────────────────────────────────────────
+.feedback-footer-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: $secondary-color;
+  font-size: inherit;
+  padding: 0;
+  text-decoration: none;
+  transition: color 0.3s ease;
+
+  &:hover {
+    color: $primary-light;
+  }
+}
+
+// ── Survey Pill-Select ─────────────────────────────────────────────
+.feedback-survey {
+  margin-bottom: 2rem;
+  text-align: left;
+}
+
+.feedback-survey__question {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.65);
+  margin-bottom: 0.85rem;
+}
+
+.feedback-survey__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: center;
+}
+
+.feedback-pill {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.75rem;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: $white;
+  }
+
+  &--active {
+    border-color: $secondary-color;
+    color: $secondary-color;
+    background: rgba($secondary-color, 0.12);
+  }
+}
+
+// ── Feedback Modal ──────────────────────────────────────────────────
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes backdropFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.feedback-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1050;
+  animation: backdropFadeIn 0.3s ease-out;
+}
+
+.feedback-modal-card {
+  animation: modalFadeIn 0.3s ease-out;
+
+  .modal-body {
+    padding: 1.5rem 2rem 2.5rem;
+  }
+}
+
+// ── Feedback Stats ──────────────────────────────────────────────────
+.feedback-stats {
+  width: 100%;
+}
+
+.feedback-stats__layout {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.feedback-stats__avg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.feedback-stats__avg-number {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: $white;
+  line-height: 1;
+}
+
+.feedback-stats__avg-stars {
+  color: $secondary-color;
+  font-size: 1rem;
+  display: flex;
+  gap: 0.15rem;
+}
+
+.feedback-stats__avg-label {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+// ── Distribution Bars ───────────────────────────────────────────────
+.feedback-stats__distribution {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.feedback-stats__bar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.feedback-stats__bar-label {
+  width: 2.5rem;
+  text-align: right;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+  flex-shrink: 0;
+
+  i { font-size: 0.65rem; }
+}
+
+.feedback-stats__bar-track {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.feedback-stats__bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, $primary-color, $secondary-color);
+  transition: width 0.6s ease;
+  min-width: 0;
+}
+
+.feedback-stats__bar-count {
+  width: 1.5rem;
+  text-align: left;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+  flex-shrink: 0;
+}

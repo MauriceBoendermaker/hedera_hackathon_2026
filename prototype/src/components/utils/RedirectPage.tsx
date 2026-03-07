@@ -4,13 +4,15 @@ import { ethers } from 'ethers';
 import abi from '../../abi_hedera.json';
 import { CONTRACT_ADDRESS, HEDERA_RPC_URL, ANALYTICS_URL } from 'utils/HederaConfig';
 import { ShowToast } from './ShowToast';
-import { COUNTDOWN_SECONDS } from 'config';
+import { COUNTDOWN_SECONDS, REDIRECT_SURVEY_TIMEOUT_MS } from 'config';
+import { FeedbackWidget } from './FeedbackWidget';
 
 function RedirectPage() {
     const { shortId } = useParams() as { shortId: string };
     const [error, setError] = useState('');
     const [destination, setDestination] = useState('');
     const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
+    const [showSurvey, setShowSurvey] = useState(false);
 
     useEffect(() => {
         async function resolveRedirect() {
@@ -79,13 +81,28 @@ function RedirectPage() {
         if (!destination) return;
 
         if (countdown <= 0) {
-            window.location.href = destination;
+            // Check if feedback was already submitted; if so, redirect immediately
+            const alreadySubmitted = (() => {
+                try { return localStorage.getItem('feedback_submitted_redirect') === '1'; } catch { return true; }
+            })();
+            if (alreadySubmitted) {
+                window.location.href = destination;
+                return;
+            }
+            setShowSurvey(true);
             return;
         }
 
         const timer = setTimeout(() => setCountdown(c => c - 1), 1000);
         return () => clearTimeout(timer);
     }, [destination, countdown]);
+
+    // Auto-redirect after survey timeout
+    useEffect(() => {
+        if (!showSurvey || !destination) return;
+        const timer = setTimeout(() => { window.location.href = destination; }, REDIRECT_SURVEY_TIMEOUT_MS);
+        return () => clearTimeout(timer);
+    }, [showSurvey, destination]);
 
     if (error) {
         const isBlocked = error.includes('unsafe destination');
@@ -180,6 +197,25 @@ function RedirectPage() {
                         <div className="spinner-border text-light" role="status" />
                     </div>
                     <p className="text-light mt-3">Resolving link from Hedera...</p>
+                </div>
+            </section>
+        );
+    }
+
+    if (showSurvey) {
+        return (
+            <section className="redirect-page">
+                <div className="redirect-card glass-card text-center">
+                    <div className="redirect-brand">
+                        dURL <small>//dev</small>
+                    </div>
+                    <p className="text-light mt-3 mb-2">Was this link useful?</p>
+                    <FeedbackWidget
+                        context="redirect"
+                        compact
+                        onSubmitted={() => { window.location.href = destination; }}
+                    />
+                    <p className="text-white-50 small mt-2">Redirecting shortly...</p>
                 </div>
             </section>
         );
