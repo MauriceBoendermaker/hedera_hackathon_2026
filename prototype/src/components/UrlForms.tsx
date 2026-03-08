@@ -3,7 +3,7 @@ import { ethers } from 'ethers';
 import abi from '../abi_hedera.json';
 import { ShowToast } from './utils/ShowToast';
 import { switchToHedera } from 'utils/NetworkSwitcher';
-import { getHashScanTxUrl, CONTRACT_ADDRESS, PROJECT_URL } from 'utils/HederaConfig';
+import { getHashScanTxUrl, CONTRACT_ADDRESS, PROJECT_URL, ANALYTICS_URL } from 'utils/HederaConfig';
 import { safeSetItem } from 'utils/safeStorage';
 import {
     GAS_LIMIT, CUSTOM_SLUG_COST_HBAR, SLUG_DEBOUNCE_MS,
@@ -403,7 +403,7 @@ export function UrlForms() {
             )}
 
             {txHash && (() => {
-                const fullUrl = `${PROJECT_URL}/#/${generatedShortId}`;
+                const fullUrl = `${ANALYTICS_URL}/s/${generatedShortId}`;
                 const shareText = `Check out my decentralized short link: ${fullUrl}`;
                 return (
                     <div className="link-created-card mt-3">

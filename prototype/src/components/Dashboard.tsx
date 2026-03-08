@@ -24,7 +24,7 @@ interface LinkItemProps {
 }
 
 const LinkRow = memo(function LinkRow({ shortId, url, visits, isCopied, onCopy, onShowQr }: LinkItemProps) {
-    const shortUrl = `${PROJECT_URL}/#/${shortId}`;
+    const shortUrl = `${ANALYTICS_URL}/s/${shortId}`;
     const txHash = safeGetItem(`txHash_${shortId}`);
     return (
         <tr>
@@ -117,7 +117,7 @@ const LinkRow = memo(function LinkRow({ shortId, url, visits, isCopied, onCopy, 
 });
 
 const LinkCard = memo(function LinkCard({ shortId, url, visits, isCopied, onCopy, onShowQr }: LinkItemProps) {
-    const shortUrl = `${PROJECT_URL}/#/${shortId}`;
+    const shortUrl = `${ANALYTICS_URL}/s/${shortId}`;
     const txHash = safeGetItem(`txHash_${shortId}`);
     return (
         <div className="link-card">
@@ -340,7 +340,7 @@ function Dashboard() {
     }, [loadLinks, retryCount]);
 
     const handleCopy = useCallback(async (shortId: string) => {
-        const fullUrl = `${PROJECT_URL}/#/${shortId}`;
+        const fullUrl = `${ANALYTICS_URL}/s/${shortId}`;
         try {
             await navigator.clipboard.writeText(fullUrl);
             ShowToast('Copied to clipboard', 'success');

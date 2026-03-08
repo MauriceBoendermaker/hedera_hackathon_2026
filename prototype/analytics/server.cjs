@@ -50,6 +50,26 @@ db.exec(`CREATE INDEX IF NOT EXISTS idx_visits_shortId ON visits (shortId)`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_visits_timestamp ON visits (timestamp)`);
 
 db.exec(`
+  CREATE TABLE IF NOT EXISTS url_destinations (
+    shortId        TEXT PRIMARY KEY,
+    destinationUrl TEXT NOT NULL,
+    fetchedAt      INTEGER NOT NULL
+  )
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS url_metadata (
+    url         TEXT PRIMARY KEY,
+    title       TEXT NOT NULL DEFAULT '',
+    description TEXT NOT NULL DEFAULT '',
+    image       TEXT NOT NULL DEFAULT '',
+    favicon     TEXT NOT NULL DEFAULT '',
+    siteName    TEXT NOT NULL DEFAULT '',
+    fetchedAt   INTEGER NOT NULL
+  )
+`);
+
+db.exec(`
   CREATE TABLE IF NOT EXISTS feedback (
     id        INTEGER PRIMARY KEY AUTOINCREMENT,
     rating    INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
@@ -100,6 +120,171 @@ const feedbackByContext = db.prepare(`
   SELECT context, COUNT(*) AS total, AVG(rating) AS avg
   FROM feedback GROUP BY context
 `);
+
+// ── Social preview: prepared statements ──────────────────────────────
+const getDestination = db.prepare('SELECT destinationUrl, fetchedAt FROM url_destinations WHERE shortId = ?');
+const upsertDestination = db.prepare(
+  'INSERT OR REPLACE INTO url_destinations (shortId, destinationUrl, fetchedAt) VALUES (?, ?, ?)'
+);
+const getMetadata = db.prepare('SELECT * FROM url_metadata WHERE url = ?');
+const upsertMetadata = db.prepare(
+  `INSERT OR REPLACE INTO url_metadata (url, title, description, image, favicon, siteName, fetchedAt)
+   VALUES (?, ?, ?, ?, ?, ?, ?)`
+);
+
+const DEST_TTL_MS = 24 * 60 * 60 * 1000;  // 24h — destinations are immutable on-chain
+const META_TTL_MS = 60 * 60 * 1000;        // 1h — sites may update OG tags
+
+// Contract config for server-side resolution
+const CONTRACT_ADDR = process.env.CONTRACT_ADDRESS || process.env.REACT_APP_CONTRACT_ADDRESS || '';
+const RPC_URL = process.env.HEDERA_RPC_URL || process.env.REACT_APP_HEDERA_RPC_URL || '';
+const FRONTEND_URL = process.env.REACT_APP_PROJECT_URL || 'http://localhost:5000';
+
+/**
+ * ABI-encode a call to getOriginalUrl(string).
+ * Selector: keccak256("getOriginalUrl(string)") first 4 bytes.
+ * We pre-compute the selector to avoid pulling in a crypto lib.
+ */
+const GET_ORIGINAL_URL_SELECTOR = '0xb58753fd'; // keccak256("getOriginalUrl(string)")[0:4]
+
+function abiEncodeString(str) {
+  // ABI encoding: offset (32 bytes) + length (32 bytes) + data (padded to 32 bytes)
+  const hex = Buffer.from(str, 'utf8').toString('hex');
+  const dataLen = Math.ceil(hex.length / 64) * 64 || 64;
+  const offset = '0000000000000000000000000000000000000000000000000000000000000020'; // 32
+  const length = str.length.toString(16).padStart(64, '0');
+  const data = hex.padEnd(dataLen, '0');
+  return offset + length + data;
+}
+
+function abiDecodeString(hexData) {
+  // Strip 0x prefix
+  const raw = hexData.startsWith('0x') ? hexData.slice(2) : hexData;
+  if (raw.length < 128) return '';
+  // First 32 bytes = offset, next 32 bytes = length
+  const strLen = parseInt(raw.slice(64, 128), 16);
+  if (strLen === 0 || strLen > 10000) return '';
+  const strHex = raw.slice(128, 128 + strLen * 2);
+  return Buffer.from(strHex, 'hex').toString('utf8');
+}
+
+async function resolveDestination(shortId) {
+  // Check cache first
+  const cached = getDestination.get(shortId);
+  if (cached && (Date.now() - cached.fetchedAt) < DEST_TTL_MS) {
+    return cached.destinationUrl;
+  }
+
+  if (!CONTRACT_ADDR || !RPC_URL) {
+    log.warn('CONTRACT_ADDRESS or HEDERA_RPC_URL not set — cannot resolve destination');
+    return null;
+  }
+
+  try {
+    const callData = GET_ORIGINAL_URL_SELECTOR + abiEncodeString(shortId);
+    const resp = await fetch(RPC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'eth_call',
+        params: [{ to: CONTRACT_ADDR, data: callData }, 'latest'],
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+
+    const json = await resp.json();
+    if (json.error || !json.result || json.result === '0x') return null;
+
+    const url = abiDecodeString(json.result);
+    if (!url) return null;
+
+    upsertDestination.run(shortId, url, Date.now());
+    return url;
+  } catch (err) {
+    log.error({ err, shortId }, 'Failed to resolve destination from contract');
+    // Return stale cache if available
+    return cached ? cached.destinationUrl : null;
+  }
+}
+
+function extractMeta(html, property) {
+  // Match both <meta property="og:..." content="..."> and <meta content="..." property="og:...">
+  const re1 = new RegExp(`<meta[^>]+(?:property|name)=["']${property}["'][^>]+content=["']([^"']{0,2048})["']`, 'i');
+  const re2 = new RegExp(`<meta[^>]+content=["']([^"']{0,2048})["'][^>]+(?:property|name)=["']${property}["']`, 'i');
+  const m = html.match(re1) || html.match(re2);
+  return m ? m[1] : '';
+}
+
+function extractTitle(html) {
+  const m = html.match(/<title[^>]*>([^<]{0,500})<\/title>/i);
+  return m ? m[1].trim() : '';
+}
+
+function extractFavicon(html, baseUrl) {
+  const m = html.match(/<link[^>]+rel=["'](?:icon|shortcut icon)["'][^>]+href=["']([^"']{0,500})["']/i)
+           || html.match(/<link[^>]+href=["']([^"']{0,500})["'][^>]+rel=["'](?:icon|shortcut icon)["']/i);
+  if (!m) return '';
+  const href = m[1];
+  if (href.startsWith('http')) return href;
+  try {
+    return new URL(href, baseUrl).href;
+  } catch {
+    return '';
+  }
+}
+
+async function fetchMetadata(url) {
+  // Check cache first
+  const cached = getMetadata.get(url);
+  if (cached && (Date.now() - cached.fetchedAt) < META_TTL_MS) {
+    return cached;
+  }
+
+  try {
+    const resp = await fetch(url, {
+      headers: {
+        'User-Agent': 'dURL-Preview/1.0 (+https://durl.dev)',
+        'Accept': 'text/html',
+      },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+    // Read up to 512KB
+    const reader = resp.body.getReader();
+    const chunks = [];
+    let totalBytes = 0;
+    const MAX_BYTES = 512 * 1024;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      totalBytes += value.length;
+      if (totalBytes >= MAX_BYTES) break;
+    }
+    reader.cancel().catch(() => {});
+
+    const html = Buffer.concat(chunks).toString('utf8');
+    const title = extractMeta(html, 'og:title') || extractTitle(html);
+    const description = extractMeta(html, 'og:description') || extractMeta(html, 'description');
+    const image = extractMeta(html, 'og:image');
+    const siteName = extractMeta(html, 'og:site_name');
+    const favicon = extractFavicon(html, url);
+
+    const meta = { url, title, description, image, favicon, siteName, fetchedAt: Date.now() };
+    upsertMetadata.run(url, title, description, image, favicon, siteName, meta.fetchedAt);
+    return meta;
+  } catch (err) {
+    log.error({ err, url }, 'Failed to fetch metadata');
+    // Return stale cache or defaults
+    if (cached) return cached;
+    return { url, title: '', description: '', image: '', favicon: '', siteName: '', fetchedAt: 0 };
+  }
+}
 
 // ── Data retention / cleanup ──────────────────────────────────────────
 const RETENTION_DAYS = Math.max(1, parseInt(process.env.RETENTION_DAYS, 10) || 90);
@@ -277,7 +462,7 @@ app.get('/health', (req, res) => {
     });
 });
 
-// ── /track input validation ────────────────────────────────────────────
+// ── Input validation & bot detection (hoisted for /s/ route) ─────────
 const VALID_SHORT_ID = /^[a-zA-Z0-9_-]{1,32}$/;
 const MAX_REFERRER_LEN = 2048;
 const MAX_UA_LEN = 512;
@@ -290,12 +475,86 @@ function sanitizeString(val, maxLen) {
         .slice(0, maxLen);
 }
 
-// ── Bot detection ──────────────────────────────────────────────────────
-const BOT_UA_PATTERN = /bot|crawl|spider|slurp|facebookexternalhit|bingpreview|linkedinbot|embedly|quora link|showyoubot|outbrain|pinterest|applebot|googlebot|bingbot|yandexbot|duckduckbot|baiduspider|sogou|exabot|semrushbot|ahrefsbot|mj12bot|dotbot|petalbot|bytespider|gptbot|chatgpt|claudebot/i;
+const BOT_UA_PATTERN = /bot|crawl|spider|slurp|facebookexternalhit|Twitterbot|Slackbot|Discordbot|bingpreview|linkedinbot|embedly|quora link|showyoubot|outbrain|pinterest|applebot|googlebot|bingbot|yandexbot|duckduckbot|baiduspider|sogou|exabot|semrushbot|ahrefsbot|mj12bot|dotbot|petalbot|bytespider|gptbot|chatgpt|claudebot/i;
 
 function isBot(ua) {
     return BOT_UA_PATTERN.test(ua);
 }
+
+// ── Social preview route ──────────────────────────────────────────────
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+app.get('/s/:shortId', async (req, res) => {
+  const { shortId } = req.params;
+
+  if (!VALID_SHORT_ID.test(shortId)) {
+    return res.status(400).send('Invalid short ID');
+  }
+
+  const ip = getClientIp(req);
+  if (isRateLimited(`preview:${ip}`, 30, 60000)) {
+    return res.status(429).send('Too many requests');
+  }
+
+  // Regular users: redirect to frontend for countdown/analytics UX
+  const ua = req.headers['user-agent'] || '';
+  if (!isBot(ua)) {
+    return res.redirect(302, `${FRONTEND_URL}/#/${shortId}`);
+  }
+
+  // Bot path: serve dynamic OG meta tags
+  try {
+    const destinationUrl = await resolveDestination(shortId);
+    if (!destinationUrl) {
+      return res.redirect(302, `${FRONTEND_URL}/#/${shortId}`);
+    }
+
+    const meta = await fetchMetadata(destinationUrl);
+    const title = escapeHtml(meta.title || destinationUrl);
+    const desc = escapeHtml(
+      (meta.description ? meta.description + ' · ' : '') + 'Verified on Hedera · dURL'
+    );
+    const image = meta.image || '';
+    const favicon = meta.favicon || '';
+    const siteName = 'dURL — Decentralized URL Shortener';
+    const previewUrl = `${req.protocol}://${req.get('host')}/s/${shortId}`;
+
+    // Relax CSP for this route to allow meta refresh redirect
+    res.setHeader('Content-Security-Policy', "default-src 'none'; img-src *; style-src 'unsafe-inline'");
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta property="og:title" content="${title}">
+  <meta property="og:description" content="${desc}">
+  ${image ? `<meta property="og:image" content="${escapeHtml(image)}">` : ''}
+  <meta property="og:url" content="${escapeHtml(previewUrl)}">
+  <meta property="og:site_name" content="${escapeHtml(siteName)}">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="${image ? 'summary_large_image' : 'summary'}">
+  <meta name="twitter:title" content="${title}">
+  <meta name="twitter:description" content="${desc}">
+  ${image ? `<meta name="twitter:image" content="${escapeHtml(image)}">` : ''}
+  ${favicon ? `<link rel="icon" href="${escapeHtml(favicon)}">` : ''}
+  <meta http-equiv="refresh" content="0;url=${escapeHtml(destinationUrl)}">
+  <title>${title}</title>
+</head>
+<body>
+  <p>Redirecting to <a href="${escapeHtml(destinationUrl)}">${escapeHtml(destinationUrl)}</a></p>
+</body>
+</html>`);
+  } catch (err) {
+    log.error({ err, shortId, reqId: req.id }, 'Social preview failed');
+    res.redirect(302, `${FRONTEND_URL}/#/${shortId}`);
+  }
+});
 
 // ── Visit deduplication (IP + shortId) ──────────────────────────────────
 const recentVisits = new Map();   // key → expireAt
