@@ -5,6 +5,7 @@ import { ShowToast } from './utils/ShowToast';
 import QRModal from './utils/QRModal';
 import { getHashScanTxUrl, CONTRACT_ADDRESS, PROJECT_URL, ANALYTICS_URL } from 'utils/HederaConfig';
 import { safeGetItem } from 'utils/safeStorage';
+import { fetchWithTimeout } from 'utils/fetchWithTimeout';
 import { Link } from 'react-router-dom';
 import {
     LINKS_PER_PAGE, LINK_FETCH_BATCH_SIZE, COPIED_FEEDBACK_MS,
@@ -12,17 +13,6 @@ import {
 } from 'config';
 
 type SortOption = 'newest' | 'oldest' | 'most-visited' | 'least-visited';
-
-function fetchWithTimeout(url: string, parentSignal: AbortSignal, timeoutMs: number): Promise<Response> {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-    const onParentAbort = () => controller.abort();
-    parentSignal.addEventListener('abort', onParentAbort);
-    return fetch(url, { signal: controller.signal }).finally(() => {
-        clearTimeout(timer);
-        parentSignal.removeEventListener('abort', onParentAbort);
-    });
-}
 
 interface LinkItemProps {
     shortId: string;
@@ -80,6 +70,14 @@ const LinkRow = memo(function LinkRow({ shortId, url, visits, isCopied, onCopy, 
                     >
                         <i className="fas fa-qrcode" />
                     </button>
+                    <Link
+                        to={`/analytics/${shortId}`}
+                        className="btn btn-sm btn-outline-light"
+                        title="View analytics"
+                        aria-label="View link analytics"
+                    >
+                        <i className="fas fa-chart-line" />
+                    </Link>
                 </div>
             </td>
             <td className="text-center">
@@ -163,6 +161,13 @@ const LinkCard = memo(function LinkCard({ shortId, url, visits, isCopied, onCopy
                 >
                     <i className="fas fa-qrcode" /> QR
                 </button>
+                <Link
+                    to={`/analytics/${shortId}`}
+                    className="btn btn-sm btn-outline-light"
+                    aria-label="View link analytics"
+                >
+                    <i className="fas fa-chart-line" /> Analytics
+                </Link>
                 {txHash && (
                     <a
                         href={getHashScanTxUrl(txHash)}

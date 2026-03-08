@@ -11,6 +11,7 @@ const Dashboard = lazy(() => import('./components/Dashboard'));
 const RedirectPage = lazy(() => import('./components/utils/RedirectPage'));
 const HowItWorks = lazy(() => import('components/How-it-works'));
 const About = lazy(() => import('./components/About'));
+const LinkAnalytics = lazy(() => import('./components/LinkAnalytics'));
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -23,6 +24,7 @@ function AnimatedRoutes() {
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/about" element={<About />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/analytics/:shortId" element={<LinkAnalytics />} />
           <Route path="/:shortId" element={<RedirectPage />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>

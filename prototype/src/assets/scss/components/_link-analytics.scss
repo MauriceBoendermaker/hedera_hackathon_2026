@@ -1,0 +1,147 @@
+.analytics-container {
+    position: relative;
+    overflow: hidden;
+    min-height: 100vh;
+    color: $white;
+    display: flex;
+    align-items: flex-start;
+    padding: 110px 0 100px;
+
+    .glass-card {
+        max-height: none;
+        overflow-y: visible;
+    }
+}
+
+.analytics-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.analytics-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    font-size: 14px;
+    transition: $transition;
+
+    &:hover {
+        color: $secondary-color;
+    }
+}
+
+.analytics-controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.analytics-range-selector {
+    display: flex;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: $corner-radius;
+    overflow: hidden;
+
+    button {
+        background: transparent;
+        border: none;
+        color: rgba(255, 255, 255, 0.6);
+        padding: 6px 14px;
+        font-size: 13px;
+        cursor: pointer;
+        transition: $transition;
+
+        &:hover {
+            color: $white;
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        &.active {
+            background: rgba($secondary-color, 0.15);
+            color: $secondary-color;
+        }
+
+        & + button {
+            border-left: 1px solid rgba(255, 255, 255, 0.12);
+        }
+    }
+}
+
+.analytics-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.analytics-section {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: $corner-radius;
+    padding: 16px;
+
+    h3 {
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.85);
+        margin-bottom: 10px;
+        font-weight: 500;
+
+        i {
+            margin-right: 8px;
+            opacity: 0.6;
+        }
+    }
+}
+
+.analytics-chart-wrapper {
+    position: relative;
+    height: 220px;
+}
+
+.analytics-chart-wrapper--doughnut {
+    height: 200px;
+    max-width: 360px;
+    margin: 0 auto;
+}
+
+.analytics-empty {
+    text-align: center;
+    padding: 24px 16px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 13px;
+
+    i {
+        display: block;
+        font-size: 24px;
+        margin-bottom: 8px;
+        opacity: 0.4;
+    }
+}
+
+.analytics-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+}
+
+.analytics-error {
+    text-align: center;
+    padding: 24px 16px;
+    color: $bad-red;
+
+    i {
+        display: block;
+        font-size: 24px;
+        margin-bottom: 8px;
+    }
+
+    button {
+        margin-top: 12px;
+    }
+}

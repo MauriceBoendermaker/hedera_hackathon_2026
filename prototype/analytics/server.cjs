@@ -4,6 +4,7 @@ const path = require('path');
 const bodyParser = require('body-parser');
 const Database = require('better-sqlite3');
 const pino = require('pino');
+const geoip = require('geoip-lite');
 
 const log = pino({
   level: process.env.LOG_LEVEL || 'info',
@@ -62,12 +63,14 @@ db.exec(`
 `);
 
 // Migrations: add columns to existing databases
+try { db.exec(`ALTER TABLE visits ADD COLUMN country TEXT NOT NULL DEFAULT ''`); } catch { /* already exists */ }
 try { db.exec(`ALTER TABLE feedback ADD COLUMN wallet TEXT NOT NULL DEFAULT ''`); } catch { /* already exists */ }
 try { db.exec(`ALTER TABLE feedback ADD COLUMN survey TEXT NOT NULL DEFAULT ''`); } catch { /* already exists */ }
+db.exec(`CREATE INDEX IF NOT EXISTS idx_visits_shortId_timestamp ON visits (shortId, timestamp)`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_feedback_timestamp ON feedback (timestamp)`);
 
 const insertVisit = db.prepare(
-  'INSERT INTO visits (shortId, timestamp, referrer, userAgent, ip) VALUES (?, ?, ?, ?, ?)'
+  'INSERT INTO visits (shortId, timestamp, referrer, userAgent, ip, country) VALUES (?, ?, ?, ?, ?, ?)'
 );
 const countByShortId = db.prepare(
   'SELECT shortId, COUNT(*) AS count FROM visits GROUP BY shortId'
@@ -356,7 +359,9 @@ app.post('/track', (req, res) => {
     }
 
     try {
-        insertVisit.run(shortId, ts, cleanReferrer, cleanUA, ip);
+        const geo = geoip.lookup(ip);
+        const country = (geo && geo.country) || '';
+        insertVisit.run(shortId, ts, cleanReferrer, cleanUA, ip, country);
         res.status(200).json({ ok: true });
     } catch (err) {
         log.error({ err, shortId, reqId: req.id }, 'Failed to insert visit');
@@ -598,6 +603,170 @@ app.get('/feedback/stats', (req, res) => {
   } catch (err) {
     log.error({ err, reqId: req.id }, 'Failed to query feedback stats');
     res.status(500).json({ error: 'Failed to read feedback stats' });
+  }
+});
+
+// ── Analytics endpoints ────────────────────────────────────────────────
+const VALID_RANGES = new Set(['7d', '30d', '90d']);
+const VALID_GRANULARITIES = new Set(['hour', 'day']);
+const RANGE_MS = { '7d': 7 * 86400000, '30d': 30 * 86400000, '90d': 90 * 86400000 };
+
+function parseAnalyticsParams(query) {
+  const { shortId, range, granularity } = query;
+  if (!shortId || typeof shortId !== 'string' || !VALID_SHORT_ID.test(shortId)) {
+    return { error: 'Invalid or missing shortId.' };
+  }
+  const r = range || '7d';
+  if (!VALID_RANGES.has(r)) {
+    return { error: 'Invalid range. Must be one of: 7d, 30d, 90d.' };
+  }
+  const g = granularity || 'day';
+  if (!VALID_GRANULARITIES.has(g)) {
+    return { error: 'Invalid granularity. Must be one of: hour, day.' };
+  }
+  return { shortId, range: r, granularity: g, since: Date.now() - RANGE_MS[r] };
+}
+
+const REFERRER_CATEGORIES = [
+  { pattern: /twitter\.com|x\.com|t\.co/i, label: 'Twitter/X' },
+  { pattern: /whatsapp\.com|wa\.me/i, label: 'WhatsApp' },
+  { pattern: /reddit\.com/i, label: 'Reddit' },
+  { pattern: /facebook\.com|fb\.me|fbclid/i, label: 'Facebook' },
+  { pattern: /linkedin\.com|lnkd\.in/i, label: 'LinkedIn' },
+  { pattern: /google\./i, label: 'Google' },
+  { pattern: /telegram\.org|t\.me/i, label: 'Telegram' },
+  { pattern: /discord\.com|discord\.gg/i, label: 'Discord' },
+];
+
+function categorizeReferrer(ref) {
+  if (!ref) return 'Direct';
+  for (const { pattern, label } of REFERRER_CATEGORIES) {
+    if (pattern.test(ref)) return label;
+  }
+  return 'Other';
+}
+
+app.get('/analytics/timeseries', (req, res) => {
+  const ip = getClientIp(req);
+  if (isRateLimited(`analytics:${ip}`, 30, 60000)) {
+    return res.status(429).json({ error: 'Too many requests. Please wait before refreshing.' });
+  }
+
+  const params = parseAnalyticsParams(req.query);
+  if (params.error) return res.status(400).json({ error: params.error });
+
+  const { shortId, granularity, since } = params;
+  const bucketMs = granularity === 'hour' ? 3600000 : 86400000;
+
+  try {
+    const rows = db.prepare(
+      `SELECT (timestamp / ? * ?) AS bucket, COUNT(*) AS count
+       FROM visits
+       WHERE shortId = ? AND timestamp >= ?
+       GROUP BY bucket
+       ORDER BY bucket`
+    ).all(bucketMs, bucketMs, shortId, since);
+
+    res.json({ shortId, granularity, data: rows });
+  } catch (err) {
+    log.error({ err, reqId: req.id }, 'Failed to query timeseries');
+    res.status(500).json({ error: 'Failed to read timeseries data' });
+  }
+});
+
+app.get('/analytics/referrers', (req, res) => {
+  const ip = getClientIp(req);
+  if (isRateLimited(`analytics:${ip}`, 30, 60000)) {
+    return res.status(429).json({ error: 'Too many requests. Please wait before refreshing.' });
+  }
+
+  const params = parseAnalyticsParams(req.query);
+  if (params.error) return res.status(400).json({ error: params.error });
+
+  const { shortId, since } = params;
+
+  try {
+    const rows = db.prepare(
+      `SELECT referrer FROM visits WHERE shortId = ? AND timestamp >= ?`
+    ).all(shortId, since);
+
+    const counts = {};
+    for (const row of rows) {
+      const cat = categorizeReferrer(row.referrer);
+      counts[cat] = (counts[cat] || 0) + 1;
+    }
+
+    res.json({ shortId, data: counts });
+  } catch (err) {
+    log.error({ err, reqId: req.id }, 'Failed to query referrers');
+    res.status(500).json({ error: 'Failed to read referrer data' });
+  }
+});
+
+app.get('/analytics/geo', (req, res) => {
+  const ip = getClientIp(req);
+  if (isRateLimited(`analytics:${ip}`, 30, 60000)) {
+    return res.status(429).json({ error: 'Too many requests. Please wait before refreshing.' });
+  }
+
+  const params = parseAnalyticsParams(req.query);
+  if (params.error) return res.status(400).json({ error: params.error });
+
+  const { shortId, since } = params;
+
+  try {
+    const rows = db.prepare(
+      `SELECT country, COUNT(*) AS count
+       FROM visits
+       WHERE shortId = ? AND timestamp >= ? AND country != ''
+       GROUP BY country
+       ORDER BY count DESC
+       LIMIT 50`
+    ).all(shortId, since);
+
+    res.json({ shortId, data: rows });
+  } catch (err) {
+    log.error({ err, reqId: req.id }, 'Failed to query geo data');
+    res.status(500).json({ error: 'Failed to read geo data' });
+  }
+});
+
+// ── Backfill countries for existing visits ────────────────────────────
+app.post('/admin/backfill-countries', (req, res) => {
+  const ip = req.socket.remoteAddress || '';
+  if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(ip)) {
+    return res.status(403).json({ error: 'Localhost only.' });
+  }
+
+  try {
+    const BATCH = 1000;
+    const select = db.prepare(
+      `SELECT id, ip FROM visits WHERE country = '' LIMIT ?`
+    );
+    const update = db.prepare(`UPDATE visits SET country = ? WHERE id = ?`);
+
+    let totalUpdated = 0;
+    let batch;
+    do {
+      batch = select.all(BATCH);
+      if (batch.length === 0) break;
+
+      const tx = db.transaction(() => {
+        for (const row of batch) {
+          const geo = geoip.lookup(row.ip);
+          const country = (geo && geo.country) || '';
+          update.run(country, row.id);
+        }
+      });
+      tx();
+      totalUpdated += batch.length;
+    } while (batch.length === BATCH);
+
+    log.info({ totalUpdated }, 'Country backfill completed');
+    res.json({ ok: true, totalUpdated });
+  } catch (err) {
+    log.error({ err, reqId: req.id }, 'Country backfill failed');
+    res.status(500).json({ error: 'Backfill failed' });
   }
 });
 

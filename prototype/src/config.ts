@@ -20,6 +20,9 @@ export const LINKS_PER_PAGE = 25;
 export const LINK_FETCH_BATCH_SIZE = 5;
 export const MAX_SLUG_LENGTH = 32;
 
+// Analytics
+export const ANALYTICS_TIMEOUT_MS = 10_000;
+
 // Feedback
 export const FEEDBACK_COMMENT_MAX = 500;
 export const REDIRECT_SURVEY_TIMEOUT_MS = 3_000;
