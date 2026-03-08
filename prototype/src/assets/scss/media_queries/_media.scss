@@ -6,10 +6,11 @@
 // ── Tablet portrait ────────────────────────────────────────────────
 // Nav: 56px fixed
 @media (max-width: 991.98px) {
-    .dashboard-container {
+    .dashboard-container,
+    .analytics-container {
         align-items: flex-start;
-        padding-top: 72px;
-        padding-bottom: 32px;
+        padding-top: 80px;
+        padding-bottom: 90px;
         min-height: unset;
     }
 
@@ -17,13 +18,13 @@
     .how-it-works-container {
         min-height: unset;
         align-items: flex-start;
-        padding-top: 72px;
-        padding-bottom: 32px;
+        padding-top: 80px;
+        padding-bottom: 90px;
     }
 
     .homepage-hero {
-        padding-top: 72px;
-        padding-bottom: 32px;
+        padding-top: 80px;
+        padding-bottom: 90px;
 
         > .container {
             padding-top: 0;
@@ -127,6 +128,27 @@
         min-width: 44px;
         min-height: 44px;
     }
+
+    .analytics-chart-wrapper {
+        height: 180px;
+    }
+
+    .analytics-chart-wrapper--doughnut {
+        height: 180px;
+    }
+
+    .analytics-controls {
+        width: 100%;
+    }
+
+    .analytics-range-selector {
+        flex: 1;
+        justify-content: center;
+
+        button {
+            flex: 1;
+        }
+    }
 }
 
 // ── Small phones ───────────────────────────────────────────────────
@@ -189,20 +211,29 @@
         }
     }
 
-    .dashboard-container {
+    .dashboard-container,
+    .analytics-container {
         padding-top: 68px;
-        padding-bottom: 20px;
+        padding-bottom: 90px;
     }
 
     .about-container,
     .how-it-works-container {
         padding-top: 68px;
-        padding-bottom: 20px;
+        padding-bottom: 90px;
     }
 
     .homepage-hero {
         padding-top: 68px;
-        padding-bottom: 20px;
+        padding-bottom: 90px;
+    }
+
+    .analytics-chart-wrapper {
+        height: 160px;
+    }
+
+    .analytics-chart-wrapper--doughnut {
+        height: 160px;
     }
 
     .nav-tabs {
@@ -257,20 +288,21 @@
         padding: 8px;
     }
 
-    .dashboard-container {
+    .dashboard-container,
+    .analytics-container {
         padding-top: 62px;
-        padding-bottom: 16px;
+        padding-bottom: 90px;
     }
 
     .about-container,
     .how-it-works-container {
         padding-top: 62px;
-        padding-bottom: 16px;
+        padding-bottom: 90px;
     }
 
     .homepage-hero {
         padding-top: 62px;
-        padding-bottom: 16px;
+        padding-bottom: 90px;
     }
 
     .redirect-card {
