@@ -30,7 +30,9 @@ function FeedbackModal({ show, onHide }: FeedbackModalProps) {
     const glareRef = useRef<HTMLDivElement>(null);
 
     const [surveyAnswers, setSurveyAnswers] = useState<Record<string, string>>({});
-    const [submitted, setSubmitted] = useState(false);
+    const [submitted, setSubmitted] = useState(() => {
+        try { return localStorage.getItem('feedback_submitted_footer') === '1'; } catch { return false; }
+    });
 
     useTiltEffect(cardRef, glareRef, show);
 
