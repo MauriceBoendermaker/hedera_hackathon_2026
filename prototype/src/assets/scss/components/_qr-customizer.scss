@@ -1,0 +1,333 @@
+// =============================================
+// QR Customizer
+// =============================================
+
+// ---- Wrapper ----
+
+.qr-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.qr-wrapper--expanded {
+    align-items: stretch;
+    text-align: left;
+
+    @media (min-width: 768px) {
+        flex-direction: row;
+        gap: 2rem;
+    }
+}
+
+// ---- Preview ----
+
+.qr-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
+
+    .qr-wrapper--expanded & {
+        @media (min-width: 768px) {
+            width: 280px;
+        }
+    }
+}
+
+.qr-preview-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.qr-preview-canvas {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid $glass-border;
+    border-radius: $corner-radius;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    canvas, svg {
+        max-width: 100%;
+        height: auto;
+    }
+}
+
+// ---- Controls ----
+
+.qr-controls {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.qr-tabs {
+    display: flex;
+    gap: 0.25rem;
+    border-bottom: 1px solid $glass-border;
+    padding-bottom: 0.5rem;
+    flex-shrink: 0;
+}
+
+.qr-tab {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    padding: 0.4rem 0.75rem;
+    border-radius: $corner-radius $corner-radius 0 0;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: color 0.2s, background 0.2s;
+    white-space: nowrap;
+
+    &:hover {
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    &.active {
+        color: #fff;
+        background: $glass-bg;
+    }
+}
+
+.qr-tab-content {
+    padding-top: 0.75rem;
+}
+
+// ---- Section labels ----
+
+.qr-section-label {
+    display: block;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 0.5rem;
+    margin-top: 1rem;
+
+    &:first-child {
+        margin-top: 0;
+    }
+}
+
+// ---- Color presets (two-half circles) ----
+
+.qr-color-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.qr-preset-swatch {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.15s;
+    padding: 0;
+    background: none;
+    position: relative;
+    overflow: hidden;
+
+    &:hover {
+        transform: scale(1.15);
+    }
+
+    &.active {
+        border-color: $secondary-color;
+        box-shadow: 0 0 8px rgba($secondary-color, 0.4);
+    }
+}
+
+.swatch-half {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 50%;
+}
+
+.swatch-half--left {
+    left: 0;
+}
+
+.swatch-half--right {
+    right: 0;
+}
+
+// ---- Color inputs ----
+
+.qr-color-inputs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+}
+
+.qr-color-input {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    input[type="color"] {
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        border: 1px solid $glass-border;
+        border-radius: 4px;
+        background: none;
+        cursor: pointer;
+
+        &::-webkit-color-swatch-wrapper {
+            padding: 2px;
+        }
+        &::-webkit-color-swatch {
+            border: none;
+            border-radius: 2px;
+        }
+    }
+
+    span {
+        font-size: 0.78rem;
+        color: rgba(255, 255, 255, 0.7);
+    }
+}
+
+// ---- Style grid ----
+
+.qr-style-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.qr-style-btn {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.78rem;
+    border: 1px solid $glass-border;
+    border-radius: $corner-radius;
+    background: $glass-bg;
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.15);
+        color: #fff;
+    }
+
+    &.active {
+        border-color: $secondary-color;
+        color: $secondary-color;
+        background: rgba($secondary-color, 0.1);
+    }
+}
+
+// ---- Logo options ----
+
+.qr-logo-options {
+    display: flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+}
+
+.qr-logo-dropzone {
+    border: 2px dashed $glass-border;
+    border-radius: $corner-radius;
+    padding: 1.25rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    margin-top: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+
+    i {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+
+    p {
+        margin: 0.25rem 0 0;
+        font-size: 0.85rem;
+    }
+
+    &:hover,
+    &.drag-over {
+        border-color: $secondary-color;
+        background: rgba($secondary-color, 0.05);
+    }
+}
+
+.qr-logo-thumb {
+    max-width: 80px;
+    max-height: 80px;
+    border-radius: 4px;
+}
+
+.qr-logo-error {
+    color: #ff6b6b;
+    font-size: 0.8rem;
+    margin-top: 0.35rem;
+}
+
+// ---- Range / slider ----
+
+.qr-range-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.qr-size-slider {
+    flex: 1;
+    appearance: none;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 2px;
+    outline: none;
+
+    &::-webkit-slider-thumb {
+        appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: $secondary-color;
+        cursor: pointer;
+    }
+
+    &::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: $secondary-color;
+        border: none;
+        cursor: pointer;
+    }
+}
+
+.qr-range-value {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.6);
+    min-width: 48px;
+    text-align: right;
+}
+
+// ---- Download / reset ----
+
+.qr-download-section {
+    margin-top: 1rem;
+}
+
+.qr-reset-btn {
+    font-size: 0.85rem;
+}
+
+.qr-format-toggle {
+    display: flex;
+    gap: 0.35rem;
+}

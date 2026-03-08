@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef } from 'react';
-import { QRCodeCanvas } from 'qrcode.react';
+import { useEffect, useRef } from 'react';
 import { useTiltEffect } from 'hooks/useTiltEffect';
+import QRCustomizer from './QRCustomizer';
 
 interface QRModalProps {
     qrValue: string;
@@ -11,7 +11,6 @@ interface QRModalProps {
 function QRModal({ qrValue, show, onHide }: QRModalProps) {
     const cardRef = useRef<HTMLDivElement>(null);
     const glareRef = useRef<HTMLDivElement>(null);
-    const canvasWrapperRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (!show) return;
@@ -31,16 +30,6 @@ function QRModal({ qrValue, show, onHide }: QRModalProps) {
 
     useTiltEffect(cardRef, glareRef, show);
 
-    const handleDownload = useCallback(() => {
-        const canvas = canvasWrapperRef.current?.querySelector('canvas');
-        if (!canvas) return;
-        const url = canvas.toDataURL('image/png');
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${qrValue.split('/').pop() || 'qr'}.png`;
-        a.click();
-    }, [qrValue]);
-
     if (!show) return null;
 
     return (
@@ -54,7 +43,7 @@ function QRModal({ qrValue, show, onHide }: QRModalProps) {
                 role="dialog"
                 onClick={(e) => { if (e.target === e.currentTarget) onHide(); }}
             >
-                <div className="modal-dialog modal-dialog-centered">
+                <div className="modal-dialog modal-dialog-centered modal-lg">
                     <div
                         ref={cardRef}
                         className="modal-content text-center text-white border-0 qr-card"
@@ -73,19 +62,8 @@ function QRModal({ qrValue, show, onHide }: QRModalProps) {
                             <h5 className="modal-title w-100" id="qrModalLabel">QR Code</h5>
                             <button type="button" className="btn-close btn-close-white" onClick={onHide} aria-label="Close" />
                         </div>
-                        <div className="modal-body" ref={canvasWrapperRef}>
-                            <QRCodeCanvas
-                                value={qrValue}
-                                size={200}
-                                bgColor="#ffffff"
-                                fgColor="#000000"
-                                includeMargin={true}
-                                level="H"
-                            />
-                            <br />
-                            <button className="btn btn-outline-light mt-3" onClick={handleDownload}>
-                                Download QR Code
-                            </button>
+                        <div className="modal-body">
+                            <QRCustomizer value={qrValue} />
                         </div>
                     </div>
                 </div>

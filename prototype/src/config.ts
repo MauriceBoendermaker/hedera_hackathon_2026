@@ -26,3 +26,9 @@ export const ANALYTICS_TIMEOUT_MS = 10_000;
 // Feedback
 export const FEEDBACK_COMMENT_MAX = 500;
 export const REDIRECT_SURVEY_TIMEOUT_MS = 3_000;
+
+// QR Customizer
+export const QR_DEBOUNCE_MS = 150;
+export const QR_LOGO_MAX_BYTES = 512 * 1024; // 512 KB
+export const QR_SIZE_MIN = 200;
+export const QR_SIZE_MAX = 1000;
