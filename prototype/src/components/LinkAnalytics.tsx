@@ -15,6 +15,7 @@ import {
 import { Line, Doughnut, Bar } from 'react-chartjs-2';
 import { fetchWithTimeout } from 'utils/fetchWithTimeout';
 import { ANALYTICS_URL } from 'utils/HederaConfig';
+import { authenticate, authHeaders, clearAuth } from 'utils/auth';
 import { ANALYTICS_TIMEOUT_MS } from 'config';
 
 ChartJS.register(
@@ -84,16 +85,32 @@ function LinkAnalytics() {
         setLoading(true);
         setError('');
 
+        // Ensure we have a valid auth token (will prompt wallet connection + signature)
+        const token = await authenticate();
+        if (!token) {
+            setError('Please sign the authentication message in your wallet to view analytics.');
+            setLoading(false);
+            return;
+        }
+
         const base = ANALYTICS_URL;
         const qs = `shortId=${encodeURIComponent(shortId)}&range=${range}&granularity=${granularity}`;
+        const headers = authHeaders();
 
         try {
             const [tsRes, refRes, geoRes] = await Promise.all([
-                fetchWithTimeout(`${base}/analytics/timeseries?${qs}`, controller.signal, ANALYTICS_TIMEOUT_MS),
-                fetchWithTimeout(`${base}/analytics/referrers?${qs}`, controller.signal, ANALYTICS_TIMEOUT_MS),
-                fetchWithTimeout(`${base}/analytics/geo?${qs}`, controller.signal, ANALYTICS_TIMEOUT_MS),
+                fetchWithTimeout(`${base}/analytics/timeseries?${qs}`, controller.signal, ANALYTICS_TIMEOUT_MS, { headers }),
+                fetchWithTimeout(`${base}/analytics/referrers?${qs}`, controller.signal, ANALYTICS_TIMEOUT_MS, { headers }),
+                fetchWithTimeout(`${base}/analytics/geo?${qs}`, controller.signal, ANALYTICS_TIMEOUT_MS, { headers }),
             ]);
 
+            if (tsRes.status === 401 || refRes.status === 401) {
+                clearAuth(); // clear stale token so retry triggers fresh auth
+                throw new Error('Session expired. Click Retry to re-authenticate.');
+            }
+            if (tsRes.status === 403 || refRes.status === 403 || geoRes.status === 403) {
+                throw new Error('You do not have permission to view analytics for this link.');
+            }
             if (!tsRes.ok || !refRes.ok || !geoRes.ok) {
                 throw new Error('One or more analytics requests failed.');
             }

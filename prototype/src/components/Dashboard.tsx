@@ -6,6 +6,7 @@ import QRModal from './utils/QRModal';
 import { getHashScanTxUrl, CONTRACT_ADDRESS, PROJECT_URL, ANALYTICS_URL } from 'utils/HederaConfig';
 import { safeGetItem } from 'utils/safeStorage';
 import { fetchWithTimeout } from 'utils/fetchWithTimeout';
+import { authenticate, authHeaders } from 'utils/auth';
 import { Link } from 'react-router-dom';
 import {
     LINKS_PER_PAGE, LINK_FETCH_BATCH_SIZE, COPIED_FEEDBACK_MS,
@@ -203,7 +204,11 @@ function Dashboard() {
         if (slugs.length === 0) return;
         try {
             const params = new URLSearchParams({ slugs: slugs.join(',') });
-            const res = await fetchWithTimeout(`${ANALYTICS_URL}/stats?${params}`, signal, STATS_TIMEOUT_MS);
+            const res = await fetchWithTimeout(
+                `${ANALYTICS_URL}/stats?${params}`, signal, STATS_TIMEOUT_MS,
+                { headers: authHeaders() },
+            );
+            if (res.status === 401) return; // not authenticated yet — skip silently
             if (res.status === 429) {
                 ShowToast('Rate limit reached — stats requests are temporarily throttled.', 'danger');
                 return;
@@ -265,6 +270,9 @@ function Dashboard() {
                 setLinks(formatted);
                 slugsRef.current = shortIds;
                 setError('');
+
+                // Authenticate with analytics server before fetching stats
+                await authenticate();
                 await fetchStats(shortIds, signal);
             }
         } catch (err: any) {
@@ -301,7 +309,10 @@ function Dashboard() {
 
             try {
                 const params = new URLSearchParams({ slugs: currentSlugs.join(',') });
-                const res = await fetchWithTimeout(`${ANALYTICS_URL}/stats?${params}`, abortController.signal, STATS_TIMEOUT_MS);
+                const res = await fetchWithTimeout(
+                    `${ANALYTICS_URL}/stats?${params}`, abortController.signal, STATS_TIMEOUT_MS,
+                    { headers: authHeaders() },
+                );
                 if (res.status === 429) {
                     ShowToast('Rate limit reached — stats requests are temporarily throttled.', 'danger');
                     pollDelay = Math.min(pollDelay * 2, POLL_MAX_MS);

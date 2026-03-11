@@ -1,3 +1,4 @@
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const crypto = require('crypto');
 const express = require('express');
 const path = require('path');
@@ -19,9 +20,11 @@ const {
   PrivateKey,
   AccountId,
 } = require('@hashgraph/sdk');
+const { ethers } = require('ethers');
+const contractAbi = require('../src/abi_hedera.json');
 
 const app = express();
-const PORT = process.env.PORT || 5001;
+const PORT = process.env.ANALYTICS_PORT || 5001;
 
 // ── Tuning constants (all overridable via env) ────────────────────────
 const DEDUP_WINDOW_MS    = parseInt(process.env.DEDUP_WINDOW_MS, 10)    || 10 * 60 * 1000; // 10 min
@@ -29,6 +32,11 @@ const TIMESTAMP_DRIFT_MS = parseInt(process.env.TIMESTAMP_DRIFT_MS, 10) || 5 * 6
 const HCS_TIMEOUT_MS     = parseInt(process.env.HCS_TIMEOUT_MS, 10)     || 10_000;          // 10 s
 const MAX_MAP_ENTRIES    = parseInt(process.env.MAX_MAP_ENTRIES, 10)     || 100_000;         // 100 k
 const BODY_SIZE_LIMIT    = process.env.BODY_SIZE_LIMIT                   || '10kb';
+
+// ── Auth constants ────────────────────────────────────────────────────
+const TOKEN_SECRET       = process.env.TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
+const TOKEN_TTL_MS       = parseInt(process.env.TOKEN_TTL_MS, 10) || 24 * 60 * 60 * 1000; // 24 h
+const CHALLENGE_TTL_MS   = 5 * 60 * 1000; // 5 min
 
 // ── SQLite setup ─────────────────────────────────────────────────────
 const DB_PATH = path.join(__dirname, 'analytics.db');
@@ -82,6 +90,22 @@ db.exec(`
   )
 `);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS url_ownership (
+    shortId TEXT NOT NULL,
+    wallet  TEXT NOT NULL,
+    PRIMARY KEY (shortId, wallet)
+  )
+`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_ownership_wallet ON url_ownership (wallet)`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS auth_challenges (
+    nonce     TEXT PRIMARY KEY,
+    createdAt INTEGER NOT NULL
+  )
+`);
+
 // Migrations: add columns to existing databases
 try { db.exec(`ALTER TABLE visits ADD COLUMN country TEXT NOT NULL DEFAULT ''`); } catch { /* already exists */ }
 try { db.exec(`ALTER TABLE feedback ADD COLUMN wallet TEXT NOT NULL DEFAULT ''`); } catch { /* already exists */ }
@@ -120,6 +144,15 @@ const feedbackByContext = db.prepare(`
   SELECT context, COUNT(*) AS total, AVG(rating) AS avg
   FROM feedback GROUP BY context
 `);
+
+// ── Auth: prepared statements ────────────────────────────────────────
+const insertChallenge = db.prepare('INSERT INTO auth_challenges (nonce, createdAt) VALUES (?, ?)');
+const getChallenge = db.prepare('SELECT * FROM auth_challenges WHERE nonce = ?');
+const deleteChallenge = db.prepare('DELETE FROM auth_challenges WHERE nonce = ?');
+const cleanExpiredChallenges = db.prepare('DELETE FROM auth_challenges WHERE createdAt < ?');
+const insertOwnership = db.prepare('INSERT OR IGNORE INTO url_ownership (shortId, wallet) VALUES (?, ?)');
+const checkOwnership = db.prepare('SELECT 1 FROM url_ownership WHERE shortId = ? AND wallet = ?');
+const getOwnedSlugs = db.prepare('SELECT shortId FROM url_ownership WHERE wallet = ?');
 
 // ── Social preview: prepared statements ──────────────────────────────
 const getDestination = db.prepare('SELECT destinationUrl, fetchedAt FROM url_destinations WHERE shortId = ?');
@@ -364,6 +397,83 @@ function isRateLimited(key, max, windowMs) {
   return bucket.count > max;
 }
 
+// ── Auth token helpers ──────────────────────────────────────────────
+function createToken(wallet) {
+  const exp = Date.now() + TOKEN_TTL_MS;
+  const payload = Buffer.from(JSON.stringify({ wallet: wallet.toLowerCase(), exp })).toString('base64url');
+  const sig = crypto.createHmac('sha256', TOKEN_SECRET).update(payload).digest('hex');
+  return `${payload}.${sig}`;
+}
+
+function verifyToken(token) {
+  if (!token || typeof token !== 'string') return null;
+  const dotIdx = token.indexOf('.');
+  if (dotIdx === -1) return null;
+  const payload = token.slice(0, dotIdx);
+  const sig = token.slice(dotIdx + 1);
+  if (!sig || sig.length !== 64) return null;
+  const expectedSig = crypto.createHmac('sha256', TOKEN_SECRET).update(payload).digest('hex');
+  try {
+    if (!crypto.timingSafeEqual(Buffer.from(sig, 'hex'), Buffer.from(expectedSig, 'hex'))) return null;
+  } catch { return null; }
+  try {
+    const data = JSON.parse(Buffer.from(payload, 'base64url').toString());
+    if (!data.wallet || !data.exp || data.exp < Date.now()) return null;
+    return data;
+  } catch { return null; }
+}
+
+function requireAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Authentication required. Connect your wallet to access analytics.' });
+  }
+  const data = verifyToken(authHeader.slice(7));
+  if (!data) {
+    return res.status(401).json({ error: 'Invalid or expired token. Please re-authenticate.' });
+  }
+  req.wallet = data.wallet;
+  next();
+}
+
+// ── Ownership sync via contract ─────────────────────────────────────
+async function syncOwnershipFromContract(wallet) {
+  if (!CONTRACT_ADDR || !RPC_URL) return [];
+  try {
+    const provider = new ethers.JsonRpcProvider(RPC_URL);
+    const contract = new ethers.Contract(CONTRACT_ADDR, contractAbi, provider);
+    const links = await contract.getUserLinks(wallet);
+
+    const insertMany = db.transaction((items) => {
+      for (const shortId of items) {
+        insertOwnership.run(shortId, wallet.toLowerCase());
+      }
+    });
+    insertMany(links);
+
+    log.info({ wallet, count: links.length }, 'Ownership synced from contract');
+    return links.map(String);
+  } catch (err) {
+    log.error({ err, wallet }, 'Failed to sync ownership from contract');
+    return [];
+  }
+}
+
+/**
+ * Check if wallet owns shortId.
+ * Falls back to a contract sync if the local table has no record.
+ */
+async function verifyOwnership(wallet, shortId) {
+  if (checkOwnership.get(shortId, wallet)) return true;
+  // Local miss — try syncing from contract
+  const links = await syncOwnershipFromContract(wallet);
+  if (links.length > 0 && checkOwnership.get(shortId, wallet)) return true;
+  return false;
+}
+
+// Clean expired auth challenges every 5 minutes
+setInterval(() => { cleanExpiredChallenges.run(Date.now() - CHALLENGE_TTL_MS); }, 5 * 60 * 1000);
+
 // HCS configuration — server-side only, no REACT_APP_ prefix for secrets
 const OPERATOR_ID = process.env.OPERATOR_ID;
 const OPERATOR_KEY = process.env.OPERATOR_KEY;
@@ -432,7 +542,7 @@ app.use((req, res, next) => {
     if (ALLOWED_ORIGINS.includes(origin)) {
         res.setHeader('Access-Control-Allow-Origin', origin);
     }
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Vary', 'Origin');
     next();
@@ -460,6 +570,66 @@ app.get('/health', (req, res) => {
             lastPurge: lastPurgeInfo,
         },
     });
+});
+
+// ── Auth endpoints ──────────────────────────────────────────────────
+app.get('/auth/challenge', (req, res) => {
+    const ip = getClientIp(req);
+    if (isRateLimited(`auth:${ip}`, 10, 60000)) {
+        return res.status(429).json({ error: 'Too many auth requests. Please wait.' });
+    }
+
+    const nonce = crypto.randomBytes(32).toString('hex');
+    insertChallenge.run(nonce, Date.now());
+
+    res.json({
+        nonce,
+        message: `Sign this message to authenticate with dURL analytics.\n\nNonce: ${nonce}`,
+    });
+});
+
+app.post('/auth/verify', (req, res) => {
+    const ip = getClientIp(req);
+    if (isRateLimited(`authverify:${ip}`, 10, 60000)) {
+        return res.status(429).json({ error: 'Too many auth attempts. Please wait.' });
+    }
+
+    const { signature, nonce } = req.body;
+
+    if (!signature || typeof signature !== 'string' || !nonce || typeof nonce !== 'string') {
+        return res.status(400).json({ error: 'Missing signature or nonce.' });
+    }
+
+    const challenge = getChallenge.get(nonce);
+    if (!challenge || (Date.now() - challenge.createdAt) > CHALLENGE_TTL_MS) {
+        deleteChallenge.run(nonce);
+        return res.status(400).json({ error: 'Invalid or expired challenge. Please request a new one.' });
+    }
+
+    deleteChallenge.run(nonce);
+
+    const message = `Sign this message to authenticate with dURL analytics.\n\nNonce: ${nonce}`;
+
+    try {
+        const recoveredAddress = ethers.verifyMessage(message, signature);
+        const wallet = recoveredAddress.toLowerCase();
+        const token = createToken(wallet);
+
+        res.json({ token, wallet, expiresAt: Date.now() + TOKEN_TTL_MS });
+    } catch (err) {
+        log.warn({ err, ip }, 'Signature verification failed');
+        return res.status(401).json({ error: 'Signature verification failed.' });
+    }
+});
+
+app.post('/auth/sync-ownership', requireAuth, async (req, res) => {
+    const ip = getClientIp(req);
+    if (isRateLimited(`ownsync:${ip}`, 5, 60000)) {
+        return res.status(429).json({ error: 'Too many sync requests. Please wait.' });
+    }
+
+    const links = await syncOwnershipFromContract(req.wallet);
+    res.json({ synced: links.length });
 });
 
 // ── Input validation & bot detection (hoisted for /s/ route) ─────────
@@ -630,7 +800,7 @@ app.post('/track', (req, res) => {
 
 const MAX_STATS_SLUGS = 100;
 
-app.get('/stats', (req, res) => {
+app.get('/stats', requireAuth, async (req, res) => {
     const ip = getClientIp(req);
 
     // 30 stats requests per IP per minute
@@ -653,12 +823,21 @@ app.get('/stats', (req, res) => {
         return res.json({});
     }
 
+    // Filter to only slugs owned by the authenticated wallet (with contract fallback)
+    const ownershipChecks = await Promise.all(
+        requested.map(async (s) => ({ s, ok: await verifyOwnership(req.wallet, s) }))
+    );
+    const owned = ownershipChecks.filter(x => x.ok).map(x => x.s);
+    if (owned.length === 0) {
+        return res.json({});
+    }
+
     try {
-        const placeholders = requested.map(() => '?').join(',');
+        const placeholders = owned.map(() => '?').join(',');
         const stmt = db.prepare(
             `SELECT shortId, COUNT(*) AS count FROM visits WHERE shortId IN (${placeholders}) GROUP BY shortId`
         );
-        const rows = stmt.all(...requested);
+        const rows = stmt.all(...owned);
         const counts = {};
         for (const row of rows) {
             counts[row.shortId] = row.count;
@@ -734,6 +913,13 @@ app.post('/hcs/submit', async (req, res) => {
     ]);
 
     const sequenceNumber = receipt.topicSequenceNumber.toString();
+
+    // Record ownership: this wallet created this slug
+    try {
+      insertOwnership.run(slug, sender.toLowerCase());
+    } catch (ownerErr) {
+      log.warn({ ownerErr, slug, sender }, 'Failed to record ownership (non-fatal)');
+    }
 
     log.info({ sequenceNumber, slug, reqId: req.id }, 'HCS message submitted');
 
@@ -818,7 +1004,7 @@ const feedbackSurveyRows = db.prepare(
   `SELECT survey FROM feedback WHERE survey != ''`
 );
 
-app.get('/feedback/stats', (req, res) => {
+app.get('/feedback/stats', requireAuth, (req, res) => {
   const ip = getClientIp(req);
 
   // 30 requests per IP per minute (same as /stats)
@@ -905,7 +1091,7 @@ function categorizeReferrer(ref) {
   return 'Other';
 }
 
-app.get('/analytics/timeseries', (req, res) => {
+app.get('/analytics/timeseries', requireAuth, async (req, res) => {
   const ip = getClientIp(req);
   if (isRateLimited(`analytics:${ip}`, 30, 60000)) {
     return res.status(429).json({ error: 'Too many requests. Please wait before refreshing.' });
@@ -915,6 +1101,11 @@ app.get('/analytics/timeseries', (req, res) => {
   if (params.error) return res.status(400).json({ error: params.error });
 
   const { shortId, granularity, since } = params;
+
+  if (!(await verifyOwnership(req.wallet, shortId))) {
+    return res.status(403).json({ error: 'You do not own this link.' });
+  }
+
   const bucketMs = granularity === 'hour' ? 3600000 : 86400000;
 
   try {
@@ -933,7 +1124,7 @@ app.get('/analytics/timeseries', (req, res) => {
   }
 });
 
-app.get('/analytics/referrers', (req, res) => {
+app.get('/analytics/referrers', requireAuth, async (req, res) => {
   const ip = getClientIp(req);
   if (isRateLimited(`analytics:${ip}`, 30, 60000)) {
     return res.status(429).json({ error: 'Too many requests. Please wait before refreshing.' });
@@ -943,6 +1134,10 @@ app.get('/analytics/referrers', (req, res) => {
   if (params.error) return res.status(400).json({ error: params.error });
 
   const { shortId, since } = params;
+
+  if (!(await verifyOwnership(req.wallet, shortId))) {
+    return res.status(403).json({ error: 'You do not own this link.' });
+  }
 
   try {
     const rows = db.prepare(
@@ -962,7 +1157,7 @@ app.get('/analytics/referrers', (req, res) => {
   }
 });
 
-app.get('/analytics/geo', (req, res) => {
+app.get('/analytics/geo', requireAuth, async (req, res) => {
   const ip = getClientIp(req);
   if (isRateLimited(`analytics:${ip}`, 30, 60000)) {
     return res.status(429).json({ error: 'Too many requests. Please wait before refreshing.' });
@@ -972,6 +1167,10 @@ app.get('/analytics/geo', (req, res) => {
   if (params.error) return res.status(400).json({ error: params.error });
 
   const { shortId, since } = params;
+
+  if (!(await verifyOwnership(req.wallet, shortId))) {
+    return res.status(403).json({ error: 'You do not own this link.' });
+  }
 
   try {
     const rows = db.prepare(

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ANALYTICS_URL } from 'utils/HederaConfig';
+import { authenticate, authHeaders } from 'utils/auth';
 
 interface StatsData {
     total: number;
@@ -12,10 +13,13 @@ export function FeedbackStats() {
     const [error, setError] = useState(false);
 
     useEffect(() => {
-        fetch(`${ANALYTICS_URL}/feedback/stats`)
-            .then((res) => res.ok ? res.json() : Promise.reject())
-            .then((data) => setStats(data))
-            .catch(() => setError(true));
+        authenticate().then((token) => {
+            if (!token) return;
+            fetch(`${ANALYTICS_URL}/feedback/stats`, { headers: authHeaders() })
+                .then((res) => res.ok ? res.json() : Promise.reject())
+                .then((data) => setStats(data))
+                .catch(() => setError(true));
+        });
     }, []);
 
     if (error || !stats || stats.total === 0) return null;
