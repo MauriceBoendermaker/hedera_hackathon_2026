@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import FeedbackModal from 'components/utils/FeedbackModal';
 
 export const Footer = () => {
@@ -23,6 +24,8 @@ export const Footer = () => {
                             >
                                 <i className="fas fa-comment-dots me-1" />Feedback
                             </button>
+                            &nbsp;|&nbsp;
+                            <Link className="btn-link" to="/privacy">Privacy</Link>
                         </p>
 
                     </div>

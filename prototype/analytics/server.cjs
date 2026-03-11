@@ -38,6 +38,13 @@ const TOKEN_SECRET       = process.env.TOKEN_SECRET || crypto.randomBytes(32).to
 const TOKEN_TTL_MS       = parseInt(process.env.TOKEN_TTL_MS, 10) || 24 * 60 * 60 * 1000; // 24 h
 const CHALLENGE_TTL_MS   = 5 * 60 * 1000; // 5 min
 
+// ── GDPR: IP pseudonymization ────────────────────────────────────────
+const IP_HASH_SECRET = process.env.IP_HASH_SECRET || TOKEN_SECRET;
+function hashIp(ip) {
+  if (!ip) return '';
+  return crypto.createHmac('sha256', IP_HASH_SECRET).update(ip).digest('hex').slice(0, 16);
+}
+
 // ── SQLite setup ─────────────────────────────────────────────────────
 const DB_PATH = path.join(__dirname, 'analytics.db');
 const db = new Database(DB_PATH);
@@ -543,8 +550,9 @@ app.use((req, res, next) => {
         res.setHeader('Access-Control-Allow-Origin', origin);
     }
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
     res.setHeader('Vary', 'Origin');
+    if (req.method === 'OPTIONS') return res.sendStatus(204);
     next();
 });
 
@@ -790,7 +798,7 @@ app.post('/track', (req, res) => {
     try {
         const geo = geoip.lookup(ip);
         const country = (geo && geo.country) || '';
-        insertVisit.run(shortId, ts, cleanReferrer, cleanUA, ip, country);
+        insertVisit.run(shortId, ts, cleanReferrer, cleanUA, hashIp(ip), country);
         res.status(200).json({ ok: true });
     } catch (err) {
         log.error({ err, shortId, reqId: req.id }, 'Failed to insert visit');
@@ -982,7 +990,7 @@ app.post('/feedback', (req, res) => {
     }
   } else {
     // Non-wallet users: 3 feedback per IP per day
-    const { count } = countFeedbackByIpToday.get(ip, dayAgo);
+    const { count } = countFeedbackByIpToday.get(hashIp(ip), dayAgo);
     if (count >= 3) {
       return res.status(429).json({ error: 'Feedback limit reached for today. Please try again tomorrow.' });
     }
@@ -992,7 +1000,7 @@ app.post('/feedback', (req, res) => {
   const cleanSurvey = sanitizeSurvey(survey);
 
   try {
-    insertFeedback.run(rating, cleanComment, context, Date.now(), ip, cleanWallet, cleanSurvey);
+    insertFeedback.run(rating, cleanComment, context, Date.now(), hashIp(ip), cleanWallet, cleanSurvey);
     res.status(200).json({ ok: true });
   } catch (err) {
     log.error({ err, reqId: req.id }, 'Failed to insert feedback');
@@ -1198,10 +1206,11 @@ app.post('/admin/backfill-countries', (req, res) => {
 
   try {
     const BATCH = 1000;
+    // Only backfill rows with plaintext IPs (contain dots/colons = not yet hashed)
     const select = db.prepare(
-      `SELECT id, ip FROM visits WHERE country = '' LIMIT ?`
+      `SELECT id, ip FROM visits WHERE country = '' AND (ip LIKE '%.%' OR ip LIKE '%:%') LIMIT ?`
     );
-    const update = db.prepare(`UPDATE visits SET country = ? WHERE id = ?`);
+    const update = db.prepare(`UPDATE visits SET country = ?, ip = ? WHERE id = ?`);
 
     let totalUpdated = 0;
     let batch;
@@ -1213,7 +1222,7 @@ app.post('/admin/backfill-countries', (req, res) => {
         for (const row of batch) {
           const geo = geoip.lookup(row.ip);
           const country = (geo && geo.country) || '';
-          update.run(country, row.id);
+          update.run(country, hashIp(row.ip), row.id);
         }
       });
       tx();
@@ -1226,6 +1235,115 @@ app.post('/admin/backfill-countries', (req, res) => {
     log.error({ err, reqId: req.id }, 'Country backfill failed');
     res.status(500).json({ error: 'Backfill failed' });
   }
+});
+
+// ── GDPR: Hash legacy plaintext IPs ──────────────────────────────────
+app.post('/admin/hash-ips', (req, res) => {
+  const ip = req.socket.remoteAddress || '';
+  if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(ip)) {
+    return res.status(403).json({ error: 'Localhost only.' });
+  }
+
+  try {
+    const BATCH = 1000;
+    let totalVisits = 0;
+    let totalFeedback = 0;
+
+    // Hash plaintext IPs in visits (contain dots/colons)
+    const selectVisits = db.prepare(
+      `SELECT id, ip FROM visits WHERE ip LIKE '%.%' OR ip LIKE '%:%' LIMIT ?`
+    );
+    const updateVisit = db.prepare(`UPDATE visits SET ip = ? WHERE id = ?`);
+    let batch;
+    do {
+      batch = selectVisits.all(BATCH);
+      if (batch.length === 0) break;
+      const tx = db.transaction(() => {
+        for (const row of batch) updateVisit.run(hashIp(row.ip), row.id);
+      });
+      tx();
+      totalVisits += batch.length;
+    } while (batch.length === BATCH);
+
+    // Hash plaintext IPs in feedback
+    const selectFeedback = db.prepare(
+      `SELECT id, ip FROM feedback WHERE ip LIKE '%.%' OR ip LIKE '%:%' LIMIT ?`
+    );
+    const updateFeedback = db.prepare(`UPDATE feedback SET ip = ? WHERE id = ?`);
+    do {
+      batch = selectFeedback.all(BATCH);
+      if (batch.length === 0) break;
+      const tx = db.transaction(() => {
+        for (const row of batch) updateFeedback.run(hashIp(row.ip), row.id);
+      });
+      tx();
+      totalFeedback += batch.length;
+    } while (batch.length === BATCH);
+
+    log.info({ totalVisits, totalFeedback }, 'IP hash migration completed');
+    res.json({ ok: true, totalVisits, totalFeedback });
+  } catch (err) {
+    log.error({ err, reqId: req.id }, 'IP hash migration failed');
+    res.status(500).json({ error: 'Migration failed' });
+  }
+});
+
+// ── GDPR: Right to erasure ───────────────────────────────────────────
+app.delete('/privacy/erase', requireAuth, async (req, res) => {
+  const ip = getClientIp(req);
+  if (isRateLimited(`erase:${ip}`, 3, 60000)) {
+    return res.status(429).json({ error: 'Too many requests.' });
+  }
+
+  const wallet = req.wallet;
+
+  try {
+    // Delete feedback submitted by this wallet
+    const deleteFeedback = db.prepare('DELETE FROM feedback WHERE wallet = ?');
+    const feedbackResult = deleteFeedback.run(wallet);
+
+    // Ownership records are NOT deleted — they mirror public on-chain state
+    // (the smart contract's getUserLinks). Deleting them would break analytics
+    // and they'd be re-synced from the blockchain on next auth anyway.
+    // Visit data is NOT deleted — visits are pseudonymized records belonging
+    // to other visitors, not the link owner's personal data.
+
+    log.info({ wallet, feedbackDeleted: feedbackResult.changes }, 'GDPR erasure completed');
+    res.json({
+      ok: true,
+      erased: {
+        feedback: feedbackResult.changes,
+      },
+    });
+  } catch (err) {
+    log.error({ err, wallet, reqId: req.id }, 'GDPR erasure failed');
+    res.status(500).json({ error: 'Erasure failed. Please try again or contact support.' });
+  }
+});
+
+// ── GDPR: Privacy policy ─────────────────────────────────────────────
+app.get('/privacy', (req, res) => {
+  const ip = getClientIp(req);
+  if (isRateLimited(`privacy:${ip}`, 20, 60000)) {
+    return res.status(429).json({ error: 'Too many requests.' });
+  }
+  res.json({
+    name: 'dURL — Decentralized URL Shortener',
+    lastUpdated: '2026-03-11',
+    dataCollected: [
+      { field: 'IP address', purpose: 'Rate limiting and abuse prevention', storage: 'Pseudonymized via HMAC hash — original IP is never stored' },
+      { field: 'Country', purpose: 'Aggregate geographic analytics for link owners', storage: 'Derived from IP at request time, stored as 2-letter country code only' },
+      { field: 'Referrer', purpose: 'Traffic source analytics for link owners', storage: 'Categorized domain only (e.g. "Google", "Twitter"), retained up to ' + RETENTION_DAYS + ' days' },
+      { field: 'User-Agent', purpose: 'Bot filtering', storage: 'Retained up to ' + RETENTION_DAYS + ' days' },
+      { field: 'Wallet address', purpose: 'Authentication and link ownership', storage: 'Public blockchain address, stored for ownership verification' },
+    ],
+    retention: RETENTION_DAYS + ' days for visit analytics; feedback retained until manual erasure',
+    rights: {
+      erasure: 'Connect your wallet and use the "Delete My Data" button on the Privacy page — this deletes your feedback submissions. Link ownership mirrors public blockchain state and cannot be erased. Anonymous visitor analytics (pseudonymized IPs, countries) belong to visitors, not link owners.',
+      access: 'Connect your wallet and visit your Dashboard to see link stats, or click any link to view its full analytics (visit timeline, traffic sources, geography)',
+    },
+    legal: 'IP addresses are pseudonymized at collection time using a one-way keyed hash. No raw IP addresses are stored. Country-level geolocation is derived before pseudonymization. Data is automatically purged after the retention period.',
+  });
 });
 
 const server = app.listen(PORT, () => log.info({ port: PORT }, 'Analytics server running'));
