@@ -1349,6 +1349,12 @@ app.get('/privacy', (req, res) => {
   });
 });
 
+// ── Global error handler (no stack traces leaked) ────────────────────
+app.use((err, req, res, _next) => {
+  log.error({ err, reqId: req.id, method: req.method, url: req.url }, 'Unhandled error');
+  res.status(err.status || 500).json({ error: 'Internal server error' });
+});
+
 const server = app.listen(PORT, () => log.info({ port: PORT }, 'Analytics server running'));
 
 function gracefulShutdown(signal) {
