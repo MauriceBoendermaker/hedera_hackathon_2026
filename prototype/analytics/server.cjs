@@ -187,7 +187,34 @@ const META_TTL_MS = 60 * 60 * 1000;        // 1h — sites may update OG tags
 
 // Contract config for server-side resolution
 const CONTRACT_ADDR = process.env.CONTRACT_ADDRESS || process.env.REACT_APP_CONTRACT_ADDRESS || '';
-const RPC_URL = process.env.HEDERA_RPC_URL || process.env.REACT_APP_HEDERA_RPC_URL || '';
+const RPC_URL_RAW = process.env.HEDERA_RPC_URL || process.env.REACT_APP_HEDERA_RPC_URL || '';
+
+// Allowlisted Hedera JSON-RPC hosts — must match HederaConfig.ts allowlist
+const ALLOWED_RPC_HOSTS = new Set([
+    'testnet.hashio.io',
+    'mainnet.hashio.io',
+    'pool.arkhia.io',
+    'hedera.validationcloud.io',
+    'localhost',
+    '127.0.0.1',
+]);
+
+function validateRpcUrl(url) {
+    if (!url) return url;
+    const parsed = new URL(url);
+    if (!ALLOWED_RPC_HOSTS.has(parsed.hostname)) {
+        throw new Error(
+            `RPC host "${parsed.hostname}" not in Hedera allowlist. ` +
+            `Allowed: ${[...ALLOWED_RPC_HOSTS].join(', ')}`
+        );
+    }
+    if (parsed.hostname !== 'localhost' && parsed.hostname !== '127.0.0.1' && parsed.protocol !== 'https:') {
+        throw new Error('RPC URL must use HTTPS for non-local hosts');
+    }
+    return url;
+}
+
+const RPC_URL = validateRpcUrl(RPC_URL_RAW);
 const FRONTEND_URL = process.env.REACT_APP_PROJECT_URL || 'http://localhost:5000';
 
 /**
