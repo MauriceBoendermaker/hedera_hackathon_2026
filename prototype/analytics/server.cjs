@@ -384,26 +384,50 @@ function enforceCap(map) {
 setInterval(() => {
   const now = Date.now();
   for (const [key, bucket] of rateBuckets) {
-    if (bucket.resetAt <= now) rateBuckets.delete(key);
+    // Stale if two full windows have passed (prev is already irrelevant)
+    if (now - bucket.windowStart >= bucket.windowMs * 2) rateBuckets.delete(key);
   }
 }, CLEANUP_INTERVAL);
 
 /**
- * Returns true if the request should be blocked.
- * @param {string} key   – unique bucket identifier (e.g. "track:<ip>:<shortId>" or "stats:<ip>")
- * @param {number} max   – max requests allowed in the window
+ * Sliding-window rate limiter (blends previous + current window).
+ * Eliminates the 2× burst-at-boundary problem of fixed windows.
+ * @param {string} key   – unique bucket identifier
+ * @param {number} max   – max requests allowed per window
  * @param {number} windowMs – window length in milliseconds
  */
 function isRateLimited(key, max, windowMs) {
   const now = Date.now();
   const bucket = rateBuckets.get(key);
-  if (!bucket || bucket.resetAt <= now) {
-    rateBuckets.set(key, { count: 1, resetAt: now + windowMs });
+
+  if (!bucket) {
+    rateBuckets.set(key, { prev: 0, curr: 1, windowStart: now, windowMs });
     enforceCap(rateBuckets);
     return false;
   }
-  bucket.count++;
-  return bucket.count > max;
+
+  const elapsed = now - bucket.windowStart;
+
+  // Slide into new window(s)
+  if (elapsed >= windowMs) {
+    const windowsElapsed = Math.floor(elapsed / windowMs);
+    if (windowsElapsed === 1) {
+      bucket.prev = bucket.curr;
+    } else {
+      bucket.prev = 0; // more than one full window passed — previous is stale
+    }
+    bucket.curr = 0;
+    bucket.windowStart += windowsElapsed * windowMs;
+  }
+
+  // Weighted estimate: blend previous window's count by remaining fraction
+  const weight = Math.max(0, 1 - (now - bucket.windowStart) / windowMs);
+  const estimate = bucket.prev * weight + bucket.curr;
+
+  if (estimate >= max) return true;
+
+  bucket.curr++;
+  return false;
 }
 
 // ── Auth token helpers ──────────────────────────────────────────────
