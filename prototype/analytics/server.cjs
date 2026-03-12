@@ -772,11 +772,12 @@ app.get('/s/:shortId', async (req, res) => {
   <meta name="twitter:description" content="${desc}">
   ${image ? `<meta name="twitter:image" content="${escapeHtml(image)}">` : ''}
   ${favicon ? `<link rel="icon" href="${escapeHtml(favicon)}">` : ''}
+  <meta name="robots" content="noindex, nofollow">
   <meta http-equiv="refresh" content="0;url=${escapeHtml(destinationUrl)}">
   <title>${title}</title>
 </head>
 <body>
-  <p>Redirecting to <a href="${escapeHtml(destinationUrl)}">${escapeHtml(destinationUrl)}</a></p>
+  <p>Redirecting to <a href="${escapeHtml(destinationUrl)}" rel="noopener noreferrer nofollow">${escapeHtml(destinationUrl)}</a></p>
 </body>
 </html>`);
   } catch (err) {

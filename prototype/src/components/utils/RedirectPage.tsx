@@ -256,11 +256,14 @@ function RedirectPage() {
                     <span className="redirect-countdown-number">{countdown}</span>
                 </div>
 
-                <p className="redirect-label">Redirecting you to</p>
+                <p className="redirect-label">You are leaving dURL for an external site</p>
                 <p className="redirect-destination" title={destination}>
                     <i className="fas fa-arrow-up-right-from-square" />{' '}
                     <strong>{displayHost}</strong>
                     {displayPath && <span className="redirect-destination-path">{displayPath}</span>}
+                </p>
+                <p className="redirect-warning text-warning small">
+                    <i className="fas fa-triangle-exclamation" /> dURL does not control or endorse the destination. Verify the URL before proceeding.
                 </p>
 
                 <div className="redirect-progress-bar">
@@ -272,6 +275,7 @@ function RedirectPage() {
 
                 <a
                     href={destination}
+                    rel="noopener noreferrer nofollow"
                     className="btn btn-outline-light btn-sm mt-3"
                 >
                     Go now
