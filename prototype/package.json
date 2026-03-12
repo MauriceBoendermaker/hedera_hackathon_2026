@@ -1,7 +1,7 @@
 {
   "homepage": ".",
-  "name": "prototype",
-  "version": "0.2.0",
+  "name": "durl",
+  "version": "0.3.0",
   "private": true,
   "dependencies": {
     "@hashgraph/sdk": "^2.80.0",
