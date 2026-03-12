@@ -8,12 +8,20 @@ const Database = require('better-sqlite3');
 const pino = require('pino');
 const geoip = require('geoip-lite');
 
+const LOG_DIR = path.join(__dirname, '..', '..', 'data', 'logs');
+fs.mkdirSync(LOG_DIR, { recursive: true });
+
 const log = pino({
   level: process.env.LOG_LEVEL || 'info',
-  ...(process.env.NODE_ENV !== 'production' && {
-    transport: { target: 'pino/file', options: { destination: 1 } },
-    formatters: { level: (label) => ({ level: label }) },
-  }),
+  formatters: { level: (label) => ({ level: label }) },
+  transport: {
+    target: 'pino-roll',
+    options: {
+      file: path.join(LOG_DIR, 'analytics'),
+      size: '10m',       // rotate at 10 MB
+      limit: { count: 5 }, // keep 5 rotated files (≤ 60 MB total)
+    },
+  },
 });
 const {
   Client,
@@ -527,6 +535,23 @@ if (OPERATOR_ID && OPERATOR_KEY) {
 app.use((req, res, next) => {
     req.id = crypto.randomUUID();
     res.setHeader('X-Request-ID', req.id);
+    next();
+});
+
+// ── Access logging (audit trail) ─────────────────────────────────────
+app.use((req, res, next) => {
+    const start = process.hrtime.bigint();
+    res.on('finish', () => {
+        const ms = Number(process.hrtime.bigint() - start) / 1e6;
+        log.info({
+            reqId: req.id,
+            method: req.method,
+            url: req.originalUrl,
+            status: res.statusCode,
+            ms: Math.round(ms),
+            ip: hashIp(req.socket.remoteAddress || ''),
+        }, 'request');
+    });
     next();
 });
 
@@ -1360,8 +1385,9 @@ app.get('/privacy', (req, res) => {
       { field: 'Referrer', purpose: 'Traffic source analytics for link owners', storage: 'Categorized domain only (e.g. "Google", "Twitter"), retained up to ' + RETENTION_DAYS + ' days' },
       { field: 'User-Agent', purpose: 'Bot filtering', storage: 'Retained up to ' + RETENTION_DAYS + ' days' },
       { field: 'Wallet address', purpose: 'Authentication and link ownership', storage: 'Public blockchain address, stored for ownership verification' },
+      { field: 'Access logs', purpose: 'Security monitoring and abuse detection', storage: 'Pseudonymized IP, request method, URL path, and response status — retained up to ' + RETENTION_DAYS + ' days' },
     ],
-    retention: RETENTION_DAYS + ' days for visit analytics; feedback retained until manual erasure',
+    retention: RETENTION_DAYS + ' days for visit analytics and access logs; feedback retained until manual erasure',
     rights: {
       erasure: 'Connect your wallet and use the "Delete My Data" button on the Privacy page — this deletes your feedback submissions. Link ownership mirrors public blockchain state and cannot be erased. Anonymous visitor analytics (pseudonymized IPs, countries) belong to visitors, not link owners.',
       access: 'Connect your wallet and visit your Dashboard to see link stats, or click any link to view its full analytics (visit timeline, traffic sources, geography)',
