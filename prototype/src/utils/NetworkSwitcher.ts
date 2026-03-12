@@ -28,4 +28,10 @@ export async function switchToHedera() {
       throw err;
     }
   }
+
+  // Verify the wallet is actually on Hedera after the switch
+  const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+  if (chainId !== HEDERA_CHAIN_ID_HEX) {
+    throw new Error('Wrong network — please switch to Hedera Testnet in your wallet.');
+  }
 }

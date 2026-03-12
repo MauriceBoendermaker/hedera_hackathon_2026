@@ -936,7 +936,7 @@ app.get('/stats', requireAuth, async (req, res) => {
     }
 });
 
-app.post('/hcs/submit', async (req, res) => {
+app.post('/hcs/submit', requireAuth, async (req, res) => {
   if (!hederaClient || !HCS_TOPIC_ID) {
     return res.status(503).json({ error: 'HCS not configured' });
   }
@@ -948,10 +948,11 @@ app.post('/hcs/submit', async (req, res) => {
     return res.status(429).json({ error: 'Too many HCS submissions. Please wait before trying again.' });
   }
 
-  const { slug, urlHash, sender } = req.body;
+  const { slug, urlHash } = req.body;
+  const sender = req.wallet; // verified via auth token, not self-reported
 
-  if (!slug || !urlHash || !sender) {
-    return res.status(400).json({ error: 'Missing required fields: slug, urlHash, sender' });
+  if (!slug || !urlHash) {
+    return res.status(400).json({ error: 'Missing required fields: slug, urlHash' });
   }
 
   if (typeof slug !== 'string' || !VALID_SHORT_ID.test(slug)) {
@@ -960,12 +961,9 @@ app.post('/hcs/submit', async (req, res) => {
   if (typeof urlHash !== 'string' || !/^[a-fA-F0-9]{64}$/.test(urlHash)) {
     return res.status(400).json({ error: 'Invalid urlHash. Must be a 64-character hex string.' });
   }
-  if (typeof sender !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(sender)) {
-    return res.status(400).json({ error: 'Invalid sender. Must be a valid Ethereum address.' });
-  }
 
   // 10 HCS submissions per sender address per hour
-  if (isRateLimited(`hcs:${sender.toLowerCase()}`, 10, 3600000)) {
+  if (isRateLimited(`hcs:${sender}`, 10, 3600000)) {
     return res.status(429).json({ error: 'Too many HCS submissions from this wallet. Please wait before trying again.' });
   }
 
