@@ -1034,9 +1034,12 @@ app.post('/feedback', (req, res) => {
   }
 });
 
-const feedbackSurveyRows = db.prepare(
-  `SELECT survey FROM feedback WHERE survey != ''`
-);
+const feedbackSurveyAgg = db.prepare(`
+  SELECT j.key AS question, j.value AS answer, COUNT(*) AS cnt
+  FROM feedback, json_each(feedback.survey) AS j
+  WHERE feedback.survey != ''
+  GROUP BY j.key, j.value
+`);
 
 app.get('/feedback/stats', requireAuth, (req, res) => {
   const ip = getClientIp(req);
@@ -1065,17 +1068,11 @@ app.get('/feedback/stats', requireAuth, (req, res) => {
       byContext[row.context] = { total: row.total, averageRating: Math.round(row.avg * 100) / 100 };
     }
 
-    // Survey breakdown: count per answer per question key
+    // Survey breakdown: aggregated in SQLite via json_each (constant memory)
     const surveyBreakdown = {};
-    const surveyRows = feedbackSurveyRows.all();
-    for (const row of surveyRows) {
-      try {
-        const parsed = JSON.parse(row.survey);
-        for (const [question, answer] of Object.entries(parsed)) {
-          if (!surveyBreakdown[question]) surveyBreakdown[question] = {};
-          surveyBreakdown[question][answer] = (surveyBreakdown[question][answer] || 0) + 1;
-        }
-      } catch { /* skip malformed JSON */ }
+    for (const { question, answer, cnt } of feedbackSurveyAgg.all()) {
+      if (!surveyBreakdown[question]) surveyBreakdown[question] = {};
+      surveyBreakdown[question][answer] = cnt;
     }
 
     res.json({ total, averageRating, distribution, byContext, surveyBreakdown });
