@@ -465,6 +465,17 @@ function isRateLimited(key, max, windowMs) {
   return false;
 }
 
+// ── HCS dedup map ───────────────────────────────────────────────────
+const hcsDedup = new Map();          // "sender:slug:urlHash" → expiry timestamp
+const HCS_DEDUP_WINDOW_MS = 3600000; // 1 hour – reject identical submissions within this window
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, expiresAt] of hcsDedup) {
+    if (now >= expiresAt) hcsDedup.delete(key);
+  }
+}, CLEANUP_INTERVAL);
+
 // ── Auth token helpers ──────────────────────────────────────────────
 function createToken(wallet) {
   const exp = Date.now() + TOKEN_TTL_MS;
@@ -967,6 +978,12 @@ app.post('/hcs/submit', requireAuth, async (req, res) => {
     return res.status(429).json({ error: 'Too many HCS submissions from this wallet. Please wait before trying again.' });
   }
 
+  // Dedup: reject identical (sender + slug + urlHash) within the window
+  const dedupKey = `${sender}:${slug}:${urlHash}`;
+  if (hcsDedup.has(dedupKey) && Date.now() < hcsDedup.get(dedupKey)) {
+    return res.status(409).json({ error: 'Duplicate HCS submission. This record was already anchored.' });
+  }
+
   const payload = JSON.stringify({
     slug,
     urlHash,
@@ -998,6 +1015,10 @@ app.post('/hcs/submit', requireAuth, async (req, res) => {
     ]);
 
     const sequenceNumber = receipt.topicSequenceNumber.toString();
+
+    // Mark as submitted so identical replays are rejected
+    hcsDedup.set(dedupKey, Date.now() + HCS_DEDUP_WINDOW_MS);
+    enforceCap(hcsDedup);
 
     // Record ownership: this wallet created this slug
     try {
