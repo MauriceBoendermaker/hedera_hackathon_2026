@@ -20,8 +20,10 @@ async function main() {
 
   console.log('Creating HCS topic on Hedera testnet...');
 
+  const operatorPrivateKey = PrivateKey.fromString(operatorKey);
   const txResponse = await new TopicCreateTransaction()
     .setTopicMemo('DURL URL shortener audit log')
+    .setSubmitKey(operatorPrivateKey.publicKey)
     .execute(client);
 
   const receipt = await txResponse.getReceipt(client);
