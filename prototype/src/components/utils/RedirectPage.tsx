@@ -45,6 +45,9 @@ function RedirectPage() {
                     return;
                 }
 
+                // Extract track-proof token issued by GET /s/:shortId
+                const trackToken = new URLSearchParams(window.location.search).get('_t') || '';
+
                 // Analytics tracking — fire-and-forget, don't block redirect
                 fetch(`${ANALYTICS_URL}/track`, {
                     method: 'POST',
@@ -53,7 +56,8 @@ function RedirectPage() {
                         shortId,
                         timestamp: Date.now(),
                         referrer: document.referrer,
-                        userAgent: navigator.userAgent
+                        userAgent: navigator.userAgent,
+                        _t: trackToken,
                     })
                 }).then(res => {
                     if (res.status === 429) {
