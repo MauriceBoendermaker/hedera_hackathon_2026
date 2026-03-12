@@ -47,6 +47,37 @@ const TOKEN_SECRET       = process.env.TOKEN_SECRET || crypto.randomBytes(32).to
 const TOKEN_TTL_MS       = parseInt(process.env.TOKEN_TTL_MS, 10) || 24 * 60 * 60 * 1000; // 24 h
 const CHALLENGE_TTL_MS   = 5 * 60 * 1000; // 5 min
 
+// ── Track-proof tokens (prevents /track inflation without visiting /s/:id) ──
+const TRACK_TOKEN_TTL_MS = 5 * 60 * 1000; // 5 min
+const TRACK_TOKEN_SECRET = process.env.TRACK_TOKEN_SECRET || TOKEN_SECRET;
+
+/** Generate HMAC proof that this IP visited /s/:shortId recently. */
+function createTrackToken(shortId, ip) {
+    const ts = Math.floor(Date.now() / TRACK_TOKEN_TTL_MS); // 5-min bucket
+    const payload = `${shortId}:${ip}:${ts}`;
+    const mac = crypto.createHmac('sha256', TRACK_TOKEN_SECRET).update(payload).digest('hex').slice(0, 32);
+    return `${ts}.${mac}`;
+}
+
+/** Verify track token — accepts current and previous time bucket for clock-edge tolerance. */
+function verifyTrackToken(token, shortId, ip) {
+    if (!token || typeof token !== 'string') return false;
+    const [tsStr, mac] = token.split('.');
+    if (!tsStr || !mac) return false;
+    const ts = parseInt(tsStr, 10);
+    if (!Number.isFinite(ts)) return false;
+    const now = Math.floor(Date.now() / TRACK_TOKEN_TTL_MS);
+    // Allow current bucket and one previous (up to ~10 min window)
+    for (let bucket = now; bucket >= now - 1; bucket--) {
+        if (ts !== bucket) continue;
+        const expected = crypto.createHmac('sha256', TRACK_TOKEN_SECRET)
+            .update(`${shortId}:${ip}:${bucket}`)
+            .digest('hex').slice(0, 32);
+        if (crypto.timingSafeEqual(Buffer.from(mac), Buffer.from(expected))) return true;
+    }
+    return false;
+}
+
 // ── GDPR: IP pseudonymization ────────────────────────────────────────
 const IP_HASH_SECRET = process.env.IP_HASH_SECRET || TOKEN_SECRET;
 function hashIp(ip) {
@@ -799,7 +830,8 @@ app.get('/s/:shortId', async (req, res) => {
   // Regular users: redirect to frontend for countdown/analytics UX
   const ua = req.headers['user-agent'] || '';
   if (!isBot(ua)) {
-    return res.redirect(302, `${FRONTEND_URL}/#/${shortId}`);
+    const trackToken = createTrackToken(shortId, ip);
+    return res.redirect(302, `${FRONTEND_URL}/?_t=${trackToken}#/${shortId}`);
   }
 
   // Bot path: serve dynamic OG meta tags
@@ -877,11 +909,17 @@ function isDuplicateVisit(ip, shortId) {
 }
 
 app.post('/track', (req, res) => {
-    const { shortId, timestamp, referrer, userAgent } = req.body;
+    const { shortId, timestamp, referrer, userAgent, _t } = req.body;
 
     // ── Validate shortId (required, must match slug format) ──
     if (!shortId || typeof shortId !== 'string' || !VALID_SHORT_ID.test(shortId)) {
         return res.status(400).json({ error: 'Invalid or missing shortId.' });
+    }
+
+    // ── Verify track-proof token (issued by GET /s/:shortId) ──
+    const ip = getClientIp(req);
+    if (!verifyTrackToken(_t, shortId, ip)) {
+        return res.status(403).json({ error: 'Invalid or missing track token.' });
     }
 
     // ── Validate & clamp timestamp ──
@@ -899,8 +937,6 @@ app.post('/track', (req, res) => {
     if (isBot(cleanUA)) {
         return res.status(200).json({ ok: true });
     }
-
-    const ip = getClientIp(req);
 
     // ── Deduplicate (same IP + shortId within 10 min → skip logging) ──
     if (isDuplicateVisit(ip, shortId)) {
