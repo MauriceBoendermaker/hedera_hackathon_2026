@@ -94,12 +94,14 @@ export function UrlForms() {
 
         // Fallback to provider.getLogs if receipt.logs empty (Hedera relay quirk)
         if (logs.length === 0) {
-            logs = await provider.getLogs({
+            logs = (await provider.getLogs({
                 address: CONTRACT_ADDRESS,
                 fromBlock: receipt.blockNumber,
                 toBlock: receipt.blockNumber,
                 topics: [iface.getEvent('ShortUrlCreated')!.topicHash],
-            });
+            }))
+            // Pin to our transaction — prevents cross-tx event confusion
+            .filter((log) => log.transactionHash === receipt.hash);
         }
 
         const parsedLog = logs
