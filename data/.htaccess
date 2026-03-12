@@ -1,0 +1,2 @@
+# Block all direct access — this directory is not web-facing
+Require all denied
