@@ -1404,6 +1404,12 @@ app.use((err, req, res, _next) => {
 
 const server = app.listen(PORT, () => log.info({ port: PORT }, 'Analytics server running'));
 
+// ── Slowloris / slow-client protection ───────────────────────────────
+server.headersTimeout  = 20_000;  // 20s to finish sending headers
+server.requestTimeout  = 30_000;  // 30s total for the full request
+server.timeout         = 60_000;  // 60s overall socket idle timeout
+server.keepAliveTimeout = 30_000; // 30s between keep-alive requests
+
 function gracefulShutdown(signal) {
     log.info({ signal }, 'Shutting down gracefully');
 
