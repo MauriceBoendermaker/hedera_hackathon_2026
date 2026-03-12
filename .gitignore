@@ -38,3 +38,6 @@ prototype/analytics/logs.json
 prototype/analytics/analytics.db
 prototype/analytics/analytics.db-wal
 prototype/analytics/analytics.db-shm
+data/analytics.db
+data/analytics.db-wal
+data/analytics.db-shm
