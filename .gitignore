@@ -41,3 +41,4 @@ prototype/analytics/analytics.db-shm
 data/analytics.db
 data/analytics.db-wal
 data/analytics.db-shm
+data/logs/
