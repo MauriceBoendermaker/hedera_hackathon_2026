@@ -8,6 +8,7 @@ import { safeGetItem } from 'utils/safeStorage';
 import { fetchWithTimeout } from 'utils/fetchWithTimeout';
 import { authenticate, authHeaders } from 'utils/auth';
 import { Link } from 'react-router-dom';
+import { isSafeUrl } from 'utils/isSafeUrl';
 import {
     LINKS_PER_PAGE, LINK_FETCH_BATCH_SIZE, COPIED_FEEDBACK_MS,
     STATS_TIMEOUT_MS, POLL_BASE_MS, POLL_MAX_MS, MAX_POLL_FAILURES,
@@ -42,16 +43,24 @@ const LinkRow = memo(function LinkRow({ shortId, url, visits, isCopied, onCopy, 
                 </a>
             </td>
             <td style={{ wordBreak: 'break-all' }}>
-                <a
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-light text-decoration-none"
-                >
-                    {url}
-                    &nbsp;
-                    <i className="fas fa-external-link-alt small" />
-                </a>
+                {isSafeUrl(url) ? (
+                    <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer nofollow"
+                        className="text-light text-decoration-none"
+                    >
+                        {url}
+                        &nbsp;
+                        <i className="fas fa-external-link-alt small" />
+                    </a>
+                ) : (
+                    <span className="text-warning" title="Blocked — unsafe URL">
+                        {url}
+                        &nbsp;
+                        <i className="fas fa-triangle-exclamation small" />
+                    </span>
+                )}
             </td>
             <td className="text-center">
                 <div className="d-flex justify-content-center gap-2 flex-wrap">
@@ -138,14 +147,20 @@ const LinkCard = memo(function LinkCard({ shortId, url, visits, isCopied, onCopy
                 </span>
             </div>
             <p className="link-card-url">
-                <a
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-light text-decoration-none"
-                >
-                    {url}
-                </a>
+                {isSafeUrl(url) ? (
+                    <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer nofollow"
+                        className="text-light text-decoration-none"
+                    >
+                        {url}
+                    </a>
+                ) : (
+                    <span className="text-warning" title="Blocked — unsafe URL">
+                        {url} <i className="fas fa-triangle-exclamation small" />
+                    </span>
+                )}
             </p>
             <div className="link-card-actions">
                 <button

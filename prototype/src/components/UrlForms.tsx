@@ -10,6 +10,7 @@ import {
     COPIED_FEEDBACK_MS, MAX_SLUG_LENGTH,
 } from 'config';
 import { FeedbackWidget } from './utils/FeedbackWidget';
+import { isSafeUrl } from 'utils/isSafeUrl';
 
 export function UrlForms() {
     const [originalUrl, setOriginalUrl] = useState('');
@@ -75,32 +76,8 @@ export function UrlForms() {
         setStatus('');
     }
 
-    function isValidUrl(string: string) {
-        try {
-            const url = new URL(string);
-            if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-                return false;
-            }
-            const hostname = url.hostname.toLowerCase();
-            if (
-                hostname === 'localhost' ||
-                hostname === '127.0.0.1' ||
-                hostname === '0.0.0.0' ||
-                hostname === '[::1]' ||
-                hostname.startsWith('10.') ||
-                hostname.startsWith('192.168.') ||
-                /^172\.(1[6-9]|2\d|3[01])\./.test(hostname)
-            ) {
-                return false;
-            }
-            return true;
-        } catch {
-            return false;
-        }
-    }
-
     function validateInputUrl() {
-        if (!isValidUrl(originalUrl)) {
+        if (!isSafeUrl(originalUrl)) {
             setUrlInvalid(true);
             ShowToast('Please enter a valid URL (https://...)', 'danger');
             return false;

@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { ethers } from 'ethers';
 import abi from '../../abi_hedera.json';
 import { CONTRACT_ADDRESS, HEDERA_RPC_URL, ANALYTICS_URL } from 'utils/HederaConfig';
+import { isSafeUrl } from 'utils/isSafeUrl';
 import { ShowToast } from './ShowToast';
 import { COUNTDOWN_SECONDS, REDIRECT_SURVEY_TIMEOUT_MS } from 'config';
 import { FeedbackWidget } from './FeedbackWidget';
@@ -39,25 +40,8 @@ function RedirectPage() {
                     return;
                 }
 
-                try {
-                    const u = new URL(dest);
-                    if (u.protocol !== 'http:' && u.protocol !== 'https:') {
-                        setError('This link points to an unsafe destination and has been blocked.');
-                        return;
-                    }
-                    const h = u.hostname.toLowerCase();
-                    if (
-                        h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' ||
-                        h === '[::1]' || h === '::1' ||
-                        h.startsWith('10.') || h.startsWith('192.168.') ||
-                        /^172\.(1[6-9]|2\d|3[01])\./.test(h) ||
-                        h.endsWith('.local') || h.endsWith('.internal')
-                    ) {
-                        setError('This link points to an unsafe destination and has been blocked.');
-                        return;
-                    }
-                } catch {
-                    setError('This link contains an invalid URL.');
+                if (!isSafeUrl(dest)) {
+                    setError('This link points to an unsafe destination and has been blocked.');
                     return;
                 }
 
