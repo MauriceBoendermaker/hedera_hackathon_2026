@@ -23,6 +23,13 @@ connect-src 'self' https://testnet.hashio.io https://hashscan.io https://durl.de
 - Analytics server: `node prototype/analytics/server.cjs` behind reverse proxy with TLS
 - Logs write to `data/logs/`, DB lives in `data/analytics.db` — both outside webroot
 
+## Nginx: security headers
+```nginx
+add_header X-Frame-Options "DENY" always;
+add_header X-Content-Type-Options "nosniff" always;
+add_header Referrer-Policy "no-referrer" always;
+```
+
 ## Post-deploy
 - Verify `.db` and `.map` files are not accessible via HTTP
-- Confirm HSTS and CSP headers in browser DevTools
+- Confirm HSTS, CSP, and X-Frame-Options headers in browser DevTools
