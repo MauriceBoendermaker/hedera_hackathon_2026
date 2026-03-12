@@ -1199,12 +1199,17 @@ app.get('/analytics/geo', requireAuth, async (req, res) => {
   }
 });
 
+// ── Admin auth (shared secret — proxy-safe) ──────────────────────────
+const ADMIN_KEY = process.env.ADMIN_KEY || '';
+function requireAdmin(req, res, next) {
+  if (!ADMIN_KEY) return res.status(503).json({ error: 'ADMIN_KEY not configured.' });
+  const provided = req.headers['x-admin-key'] || '';
+  if (provided !== ADMIN_KEY) return res.status(403).json({ error: 'Forbidden.' });
+  next();
+}
+
 // ── Backfill countries for existing visits ────────────────────────────
-app.post('/admin/backfill-countries', (req, res) => {
-  const ip = req.socket.remoteAddress || '';
-  if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(ip)) {
-    return res.status(403).json({ error: 'Localhost only.' });
-  }
+app.post('/admin/backfill-countries', requireAdmin, (req, res) => {
 
   try {
     const BATCH = 1000;
@@ -1240,11 +1245,7 @@ app.post('/admin/backfill-countries', (req, res) => {
 });
 
 // ── GDPR: Hash legacy plaintext IPs ──────────────────────────────────
-app.post('/admin/hash-ips', (req, res) => {
-  const ip = req.socket.remoteAddress || '';
-  if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(ip)) {
-    return res.status(403).json({ error: 'Localhost only.' });
-  }
+app.post('/admin/hash-ips', requireAdmin, (req, res) => {
 
   try {
     const BATCH = 1000;
