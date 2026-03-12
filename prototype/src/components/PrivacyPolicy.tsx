@@ -121,7 +121,7 @@ function PrivacyPolicy() {
 
                                 <h2 className="h5 mb-3">Your Rights</h2>
                                 <ul>
-                                    <li><strong>Right to access:</strong> Connect your wallet and visit your <Link to="/dashboard">Dashboard</Link> to see link stats, or click any link to view its full analytics (visit timeline, traffic sources, geography).</li>
+                                    <li><strong>Right to access:</strong> Connect your wallet and visit your <Link to="/dashboard" className="btn-link">Dashboard</Link> to see link stats, or click any link to view its full analytics (visit timeline, traffic sources, geography).</li>
                                     <li><strong>Right to erasure:</strong> Use the button below to permanently delete all your data.</li>
                                 </ul>
 
