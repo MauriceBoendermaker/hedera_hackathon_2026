@@ -218,11 +218,33 @@ function abiDecodeString(hexData) {
   return Buffer.from(strHex, 'hex').toString('utf8');
 }
 
+/**
+ * Validates that a URL is safe to redirect to.
+ * Blocks non-http(s) schemes (javascript:, data:, etc.) and private/loopback IPs.
+ */
+function isSafeUrl(raw) {
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return false;
+    const h = u.hostname.toLowerCase();
+    if (
+      h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' ||
+      h === '[::1]' || h === '::1' ||
+      h.startsWith('10.') || h.startsWith('192.168.') ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(h) ||
+      h.endsWith('.local') || h.endsWith('.internal')
+    ) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function resolveDestination(shortId) {
-  // Check cache first
+  // Check cache first (re-validate in case URL was cached before safety checks)
   const cached = getDestination.get(shortId);
   if (cached && (Date.now() - cached.fetchedAt) < DEST_TTL_MS) {
-    return cached.destinationUrl;
+    return isSafeUrl(cached.destinationUrl) ? cached.destinationUrl : null;
   }
 
   if (!CONTRACT_ADDR || !RPC_URL) {
@@ -249,6 +271,11 @@ async function resolveDestination(shortId) {
 
     const url = abiDecodeString(json.result);
     if (!url) return null;
+
+    if (!isSafeUrl(url)) {
+      log.warn({ shortId, url }, 'Blocked unsafe destination URL from contract');
+      return null;
+    }
 
     upsertDestination.run(shortId, url, Date.now());
     return url;
