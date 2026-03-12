@@ -1,5 +1,6 @@
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const crypto = require('crypto');
+const fs = require('fs');
 const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
@@ -45,8 +46,9 @@ function hashIp(ip) {
   return crypto.createHmac('sha256', IP_HASH_SECRET).update(ip).digest('hex').slice(0, 16);
 }
 
-// ── SQLite setup ─────────────────────────────────────────────────────
-const DB_PATH = path.join(__dirname, 'analytics.db');
+// ── SQLite setup (DB lives outside webroot for security) ─────────────
+const DB_PATH = path.join(__dirname, '..', '..', 'data', 'analytics.db');
+fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 db.pragma('busy_timeout = 5000');
