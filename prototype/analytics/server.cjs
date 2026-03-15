@@ -1102,6 +1102,70 @@ app.post('/hcs/submit', requireAuth, async (req, res) => {
   }
 });
 
+// ── HCS link-creation log (called from frontend after on-chain tx) ───
+app.post('/hcs/log-link', async (req, res) => {
+  if (!hederaClient || !HCS_TOPIC_ID) {
+    return res.status(503).json({ error: 'HCS not configured' });
+  }
+
+  const ip = getClientIp(req);
+  if (isRateLimited(`hcs-log:${ip}`, 10, 60000)) {
+    return res.status(429).json({ error: 'Rate limited' });
+  }
+
+  const { slug, originalUrl, creator, type, txHash, timestamp } = req.body;
+
+  if (!slug || !originalUrl || !creator || !txHash) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  if (typeof slug !== 'string' || !VALID_SHORT_ID.test(slug)) {
+    return res.status(400).json({ error: 'Invalid slug' });
+  }
+
+  const payload = JSON.stringify({
+    event: 'link_created',
+    slug,
+    urlHash: crypto.createHash('sha256').update(originalUrl).digest('hex'),
+    creator,
+    type,
+    txHash,
+    ts: Math.floor((timestamp || Date.now()) / 1000),
+  });
+
+  if (Buffer.byteLength(payload, 'utf8') > 1024) {
+    return res.status(400).json({ error: 'Payload exceeds 1024-byte HCS limit' });
+  }
+
+  try {
+    const submitTx = await Promise.race([
+      new TopicMessageSubmitTransaction()
+        .setTopicId(HCS_TOPIC_ID)
+        .setMessage(payload)
+        .execute(hederaClient),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('HCS_TIMEOUT')), HCS_TIMEOUT_MS)
+      ),
+    ]);
+
+    const receipt = await Promise.race([
+      submitTx.getReceipt(hederaClient),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('HCS_TIMEOUT')), HCS_TIMEOUT_MS)
+      ),
+    ]);
+
+    log.info({ seq: receipt.topicSequenceNumber.toString(), slug, reqId: req.id }, 'HCS link logged');
+    return res.json({ ok: true, sequenceNumber: receipt.topicSequenceNumber.toString() });
+  } catch (err) {
+    log.error({ err, reqId: req.id }, 'HCS log-link failed');
+    if (err.message === 'HCS_TIMEOUT') {
+      return res.status(504).json({ error: 'HCS timeout' });
+    }
+    return res.status(500).json({ error: 'HCS submission failed' });
+  }
+});
+
 // ── Feedback endpoints ────────────────────────────────────────────────
 const VALID_FEEDBACK_CONTEXTS = new Set(['creation', 'redirect', 'footer']);
 const MAX_COMMENT_LEN = 500;

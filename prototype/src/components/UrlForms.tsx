@@ -11,6 +11,7 @@ import {
 } from 'config';
 import { FeedbackWidget } from './utils/FeedbackWidget';
 import { isSafeUrl } from 'utils/isSafeUrl';
+import { logLinkCreated } from 'utils/hcsLogger';
 
 export function UrlForms() {
     const [originalUrl, setOriginalUrl] = useState('');
@@ -174,6 +175,14 @@ export function UrlForms() {
 
                 setTxHash(receipt.hash);
                 setGeneratedShortId(shortId ?? customId);
+                await logLinkCreated({
+                    slug: shortId ?? customId,
+                    originalUrl,
+                    creator: await signer.getAddress(),
+                    type: 'custom',
+                    txHash: receipt.hash,
+                    timestamp: Date.now(),
+                });
                 resetForm();
                 ShowToast('Custom link created! View on HashScan', 'success');
                 setStatus('Confirmed in block ' + receipt.blockNumber);
@@ -196,6 +205,14 @@ export function UrlForms() {
 
                 setTxHash(receipt.hash);
                 setGeneratedShortId(shortId ?? '');
+                await logLinkCreated({
+                    slug: shortId ?? '',
+                    originalUrl,
+                    creator: await signer.getAddress(),
+                    type: 'random',
+                    txHash: receipt.hash,
+                    timestamp: Date.now(),
+                });
                 resetForm();
                 ShowToast('Short link created! View on HashScan', 'success');
                 setStatus('Confirmed in block ' + receipt.blockNumber);
