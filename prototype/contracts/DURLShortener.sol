@@ -35,7 +35,9 @@ contract DURLShortener {
         string memory customId,
         string memory originalUrl
     ) external payable {
-        require(msg.value >= 1 ether, "Payment of 1 HBAR required");
+        // Hedera EVM expresses msg.value in tinybars (1 HBAR = 10^8 tinybars).
+        // Using `1 ether` (10^18) would never match 1 HBAR on Hedera.
+        require(msg.value >= 100_000_000, "Payment of 1 HBAR required");
         require(bytes(urlMapping[customId].originalUrl).length == 0, "Short ID already taken");
 
         urlMapping[customId] = ShortLink(originalUrl, block.timestamp);
