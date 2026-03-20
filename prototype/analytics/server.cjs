@@ -278,20 +278,51 @@ function abiDecodeString(hexData) {
 
 /**
  * Validates that a URL is safe to redirect to.
- * Blocks non-http(s) schemes (javascript:, data:, etc.) and private/loopback IPs.
+ * Blocks non-http(s) schemes, embedded credentials, and private/reserved IP ranges.
  */
 function isSafeUrl(raw) {
   try {
     const u = new URL(raw);
     if (u.protocol !== 'http:' && u.protocol !== 'https:') return false;
+    if (u.username || u.password) return false;
+
     const h = u.hostname.toLowerCase();
+    const bare = h.startsWith('[') && h.endsWith(']') ? h.slice(1, -1) : h;
+
+    // IPv6 private/reserved
+    if (bare.includes(':')) {
+      if (
+        bare === '::1' || bare === '::' ||
+        /^fc/.test(bare) || /^fd/.test(bare) ||
+        /^fe[89ab]/.test(bare)
+      ) return false;
+    }
+
+    // IPv4 private/reserved
+    if (/^\d{1,3}(\.\d{1,3}){3}$/.test(bare)) {
+      const parts = bare.split('.').map(Number);
+      const [a, b] = parts;
+      if (
+        a === 0 ||                              // 0.0.0.0/8
+        a === 10 ||                             // 10.0.0.0/8
+        a === 127 ||                            // 127.0.0.0/8
+        (a === 169 && b === 254) ||             // 169.254.0.0/16 link-local
+        (a === 172 && b >= 16 && b <= 31) ||    // 172.16.0.0/12
+        (a === 192 && b === 168) ||             // 192.168.0.0/16
+        (a === 100 && b >= 64 && b <= 127) ||   // 100.64.0.0/10 CGNAT
+        (a === 198 && (b === 18 || b === 19)) || // 198.18.0.0/15 benchmarking
+        a >= 224                                 // 224+ multicast & reserved
+      ) return false;
+    }
+
+    // Local/internal hostnames
     if (
-      h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' ||
-      h === '[::1]' || h === '::1' ||
-      h.startsWith('10.') || h.startsWith('192.168.') ||
-      /^172\.(1[6-9]|2\d|3[01])\./.test(h) ||
-      h.endsWith('.local') || h.endsWith('.internal')
+      bare === 'localhost' ||
+      bare.endsWith('.local') ||
+      bare.endsWith('.internal') ||
+      bare.endsWith('.localhost')
     ) return false;
+
     return true;
   } catch {
     return false;
