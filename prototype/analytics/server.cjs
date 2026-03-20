@@ -291,6 +291,9 @@ function isSafeUrl(raw) {
 
     // IPv6 private/reserved
     if (bare.includes(':')) {
+      // Strip ::ffff: prefix (IPv4-mapped IPv6) and re-check as IPv4
+      const v4mapped = bare.match(/^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/i);
+      if (v4mapped) return isSafeUrl(`${u.protocol}//${v4mapped[1]}`);
       if (
         bare === '::1' || bare === '::' ||
         /^fc/.test(bare) || /^fd/.test(bare) ||
@@ -401,6 +404,8 @@ function extractFavicon(html, baseUrl) {
   }
 }
 
+const MAX_REDIRECTS = 5;
+
 async function fetchMetadata(url) {
   // Check cache first
   const cached = getMetadata.get(url);
@@ -409,14 +414,29 @@ async function fetchMetadata(url) {
   }
 
   try {
-    const resp = await fetch(url, {
-      headers: {
-        'User-Agent': 'dURL-Preview/1.0 (+https://durl.dev)',
-        'Accept': 'text/html',
-      },
-      redirect: 'follow',
-      signal: AbortSignal.timeout(5000),
-    });
+    // Follow redirects manually so each hop is validated against isSafeUrl
+    let currentUrl = url;
+    let resp;
+    for (let i = 0; i <= MAX_REDIRECTS; i++) {
+      if (!isSafeUrl(currentUrl)) {
+        throw new Error(`Redirect to unsafe URL blocked: ${currentUrl}`);
+      }
+      resp = await fetch(currentUrl, {
+        headers: {
+          'User-Agent': 'dURL-Preview/1.0 (+https://durl.dev)',
+          'Accept': 'text/html',
+        },
+        redirect: 'manual',
+        signal: AbortSignal.timeout(5000),
+      });
+      if (resp.status >= 300 && resp.status < 400) {
+        const location = resp.headers.get('location');
+        if (!location) break;
+        currentUrl = new URL(location, currentUrl).href;
+        continue;
+      }
+      break;
+    }
 
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 

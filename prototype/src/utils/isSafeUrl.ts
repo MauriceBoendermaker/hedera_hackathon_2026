@@ -16,6 +16,9 @@ export function isSafeUrl(raw: string): boolean {
 
         // Block IPv6 private/reserved ranges
         if (bare.includes(':')) {
+            // Strip ::ffff: prefix (IPv4-mapped IPv6) and re-check as IPv4
+            const v4mapped = bare.match(/^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/i);
+            if (v4mapped) return isSafeUrl(`${u.protocol}//${v4mapped[1]}`);
             // ::1 loopback, fc00::/7 unique-local, fe80::/10 link-local, :: unspecified
             if (
                 bare === '::1' || bare === '::' ||
