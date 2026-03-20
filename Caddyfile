@@ -9,6 +9,9 @@ durl.dev {
     handle /auth/* {
         reverse_proxy localhost:5001
     }
+    handle /analytics/* {
+        reverse_proxy localhost:5001
+    }
     handle /stats* {
         reverse_proxy localhost:5001
     }
@@ -19,6 +22,12 @@ durl.dev {
         reverse_proxy localhost:5001
     }
     handle /feedback* {
+        reverse_proxy localhost:5001
+    }
+    handle /health {
+        reverse_proxy localhost:5001
+    }
+    handle /admin/* {
         reverse_proxy localhost:5001
     }
 
