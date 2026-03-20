@@ -1636,7 +1636,8 @@ app.use((err, req, res, _next) => {
   res.status(err.status || 500).json({ error: 'Internal server error' });
 });
 
-const server = app.listen(PORT, () => log.info({ port: PORT }, 'Analytics server running'));
+const listenTarget = typeof PhusionPassenger !== 'undefined' ? 'passenger' : PORT;
+const server = app.listen(listenTarget, () => log.info({ port: listenTarget }, 'Analytics server running'));
 
 // ── Slowloris / slow-client protection ───────────────────────────────
 server.headersTimeout  = 20_000;  // 20s to finish sending headers
