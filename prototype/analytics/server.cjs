@@ -1164,21 +1164,30 @@ app.post('/hcs/log-link', requireAuth, async (req, res) => {
     return res.status(429).json({ error: 'Rate limited' });
   }
 
-  const { slug, originalUrl, creator, type, txHash, timestamp } = req.body;
+  const { slug, originalUrl, type, txHash, timestamp } = req.body;
 
-  if (!slug || !originalUrl || !creator || !txHash) {
+  if (!slug || !originalUrl || !txHash) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
   if (typeof slug !== 'string' || !VALID_SHORT_ID.test(slug)) {
     return res.status(400).json({ error: 'Invalid slug' });
   }
+  if (typeof originalUrl !== 'string' || originalUrl.length > 2048) {
+    return res.status(400).json({ error: 'Invalid or too-long originalUrl' });
+  }
+  if (typeof txHash !== 'string' || !/^0x[a-fA-F0-9]{64}$/.test(txHash)) {
+    return res.status(400).json({ error: 'Invalid txHash' });
+  }
+  if (type !== 'random' && type !== 'custom') {
+    return res.status(400).json({ error: 'Invalid type. Must be "random" or "custom".' });
+  }
 
   const payload = JSON.stringify({
     event: 'link_created',
     slug,
     urlHash: crypto.createHash('sha256').update(originalUrl).digest('hex'),
-    creator,
+    creator: req.wallet,
     type,
     txHash,
     ts: Math.floor((timestamp || Date.now()) / 1000),
