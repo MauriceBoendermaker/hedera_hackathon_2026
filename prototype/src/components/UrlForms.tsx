@@ -55,8 +55,10 @@ export function UrlForms() {
                     setShortUrlExistsError(exists);
                     if (exists) setSlugHint('');
                 }
-            } catch {
-                // Silently ignore — availability will be re-checked on submit
+            } catch (err: any) {
+                if (!abort.signal.aborted && err?.code === 'CALL_EXCEPTION') {
+                    setSlugHint('Switch MetaMask to Hedera Testnet to check availability');
+                }
             } finally {
                 if (!abort.signal.aborted) setCheckingSlug(false);
             }
@@ -228,6 +230,8 @@ export function UrlForms() {
                 message = 'A wallet request is already pending. Check your MetaMask.';
             } else if (err.code === 'CALL_EXCEPTION' && err.reason) {
                 message = `Contract error: ${err.reason}`;
+            } else if (err.code === 'CALL_EXCEPTION') {
+                message = 'Could not reach the smart contract. Make sure MetaMask is on Hedera Testnet.';
             } else if (err.reason) {
                 message = `Transaction failed: ${err.reason}`;
             } else if (err.message?.includes('timeout') || err.code === 'TIMEOUT') {
