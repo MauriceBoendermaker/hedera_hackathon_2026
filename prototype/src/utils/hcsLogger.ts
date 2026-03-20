@@ -1,4 +1,4 @@
-const ANALYTICS_URL = process.env.REACT_APP_ANALYTICS_URL || 'http://localhost:5001';
+const ANALYTICS_URL = process.env.REACT_APP_ANALYTICS_URL || '';
 
 export interface LinkCreatedEvent {
   slug: string;
