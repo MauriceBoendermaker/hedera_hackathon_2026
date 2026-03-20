@@ -1134,7 +1134,7 @@ app.post('/hcs/submit', requireAuth, async (req, res) => {
 });
 
 // ── HCS link-creation log (called from frontend after on-chain tx) ───
-app.post('/hcs/log-link', async (req, res) => {
+app.post('/hcs/log-link', requireAuth, async (req, res) => {
   if (!hederaClient || !HCS_TOPIC_ID) {
     return res.status(503).json({ error: 'HCS not configured' });
   }

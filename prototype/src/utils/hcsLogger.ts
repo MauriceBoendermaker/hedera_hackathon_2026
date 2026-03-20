@@ -1,3 +1,5 @@
+import { authHeaders } from './auth';
+
 const ANALYTICS_URL = process.env.REACT_APP_ANALYTICS_URL || '';
 
 export interface LinkCreatedEvent {
@@ -13,7 +15,7 @@ export async function logLinkCreated(event: LinkCreatedEvent): Promise<void> {
   try {
     const res = await fetch(`${ANALYTICS_URL}/hcs/log-link`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(event),
     });
     if (!res.ok) {
