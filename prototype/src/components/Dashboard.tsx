@@ -42,13 +42,14 @@ const LinkRow = memo(function LinkRow({ shortId, url, visits, isCopied, onCopy, 
                     <i className="fas fa-external-link-alt small" />
                 </a>
             </td>
-            <td style={{ wordBreak: 'break-all' }}>
+            <td className="text-truncate" style={{ maxWidth: '300px' }}>
                 {isSafeUrl(url) ? (
                     <a
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer nofollow"
                         className="text-light text-decoration-none"
+                        title={url}
                     >
                         {url}
                         &nbsp;
@@ -63,7 +64,7 @@ const LinkRow = memo(function LinkRow({ shortId, url, visits, isCopied, onCopy, 
                 )}
             </td>
             <td className="text-center">
-                <div className="d-flex justify-content-center gap-2 flex-wrap">
+                <div className="d-flex justify-content-center gap-2 flex-nowrap">
                     <button
                         className={`btn btn-sm ${isCopied ? 'btn-success' : 'btn-outline-light'}`}
                         onClick={() => onCopy(shortId)}
