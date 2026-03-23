@@ -199,7 +199,7 @@ prototype/
 
 ## Demo
 
-> **Demo Video:** [YouTube link here]
+> **Demo Video:** https://youtu.be/sh6hch3ivBg
 >
 > **Live Demo:** [https://durl.dev](https://durl.dev)
 
