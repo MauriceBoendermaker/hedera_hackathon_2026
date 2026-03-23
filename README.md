@@ -101,7 +101,7 @@ dURL leverages multiple Hedera network services:
 
 ```bash
 # Clone the repository
-git clone https://github.com/YourUsername/hedera_hackathon_2026.git
+git clone https://github.com/MauriceBoendermaker/hedera_hackathon_2026.git
 cd hedera_hackathon_2026/prototype
 
 # Install dependencies
